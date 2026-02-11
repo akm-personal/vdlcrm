@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Vdlcrm.Utilities/1.0.0": {
+        "runtime": {
+          "Vdlcrm.Utilities.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Vdlcrm.Utilities/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

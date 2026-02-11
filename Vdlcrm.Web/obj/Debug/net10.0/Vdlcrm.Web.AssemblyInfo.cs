@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Vdlcrm.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7b0c8fe06ac958ce51bcee0c36fa10c6a2de8850")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a2a9cc4c9024abbec52f7caf2468190253d87a6e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Vdlcrm.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Vdlcrm.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,12 @@
+/workspaces/vdlcrm/Vdlcrm.Utilities/bin/Debug/net10.0/Vdlcrm.Utilities.deps.json
+/workspaces/vdlcrm/Vdlcrm.Utilities/bin/Debug/net10.0/Vdlcrm.Utilities.dll
+/workspaces/vdlcrm/Vdlcrm.Utilities/bin/Debug/net10.0/Vdlcrm.Utilities.pdb
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.AssemblyInfoInputs.cache
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.AssemblyInfo.cs
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.csproj.CoreCompileInputs.cache
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.sourcelink.json
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.dll
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/refint/Vdlcrm.Utilities.dll
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/Vdlcrm.Utilities.pdb
+/workspaces/vdlcrm/Vdlcrm.Utilities/obj/Debug/net10.0/ref/Vdlcrm.Utilities.dll
