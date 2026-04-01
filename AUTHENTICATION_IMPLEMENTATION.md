@@ -52,7 +52,7 @@ New tables created:
 
 #### Student Endpoints (role-protected)
 - `POST /api/student/register` - Public registration
-- `GET /api/student` - Admin/Internal User only
+- `GET /api/StudentList` - Admin/Internal User only
 - `GET /api/student/{id}` - All authenticated users
 - `PUT /api/student/{id}` - Admin only
 - `DELETE /api/student/{id}` - Admin only
@@ -255,7 +255,7 @@ See `API_TEST_EXAMPLES.md` for complete examples.
 
 4. Access protected endpoint:
    ```
-   GET /api/student
+   GET /api/StudentList
    Authorization: Bearer <TOKEN>
    ```
 

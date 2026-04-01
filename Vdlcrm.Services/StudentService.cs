@@ -163,41 +163,15 @@ public class StudentService
         if (!IsValidEmail(student.Email))
             throw new ArgumentException("Email format is invalid.", nameof(student.Email));
 
-        if (string.IsNullOrWhiteSpace(student.FatherName))
-            throw new ArgumentException("Father's name is required.", nameof(student.FatherName));
-
-        if (student.DateOfBirth == default)
-            throw new ArgumentException("Date of birth is required.", nameof(student.DateOfBirth));
-
-        if (student.DateOfBirth >= DateTime.Now)
+        // Removed strict validation since fields are now optional for future completion
+        if (student.DateOfBirth.HasValue && student.DateOfBirth.Value >= DateTime.Now)
             throw new ArgumentException("Date of birth must be in the past.", nameof(student.DateOfBirth));
-
-        if (string.IsNullOrWhiteSpace(student.Gender))
-            throw new ArgumentException("Gender is required.", nameof(student.Gender));
-
-        if (string.IsNullOrWhiteSpace(student.Address))
-            throw new ArgumentException("Address is required.", nameof(student.Address));
-
-        if (string.IsNullOrWhiteSpace(student.MobileNumber))
-            throw new ArgumentException("Mobile number is required.", nameof(student.MobileNumber));
-
-        if (!IsValidPhoneNumber(student.MobileNumber))
+            
+        if (!string.IsNullOrWhiteSpace(student.MobileNumber) && !IsValidPhoneNumber(student.MobileNumber))
             throw new ArgumentException("Mobile number format is invalid.", nameof(student.MobileNumber));
-
+            
         if (!string.IsNullOrWhiteSpace(student.AlternateNumber) && !IsValidPhoneNumber(student.AlternateNumber))
             throw new ArgumentException("Alternate number format is invalid.", nameof(student.AlternateNumber));
-
-        if (string.IsNullOrWhiteSpace(student.Class))
-            throw new ArgumentException("Class is required.", nameof(student.Class));
-
-        if (string.IsNullOrWhiteSpace(student.IdProof))
-            throw new ArgumentException("ID proof is required.", nameof(student.IdProof));
-
-        if (string.IsNullOrWhiteSpace(student.ShiftType))
-            throw new ArgumentException("Shift type is required.", nameof(student.ShiftType));
-
-        if (student.SeatNumber <= 0)
-            throw new ArgumentException("Seat number must be greater than 0.", nameof(student.SeatNumber));
     }
 
     /// <summary>
@@ -246,40 +220,14 @@ public class StudentService
         if (!IsValidEmail(student.Email))
             throw new ArgumentException("Email format is invalid.", nameof(student.Email));
 
-        if (string.IsNullOrWhiteSpace(student.FatherName))
-            throw new ArgumentException("Father's name is required.", nameof(student.FatherName));
-
-        if (student.DateOfBirth == default)
-            throw new ArgumentException("Date of birth is required.", nameof(student.DateOfBirth));
-
-        if (student.DateOfBirth >= DateTime.Now)
+        // Removed strict validation since fields are now optional for future completion
+        if (student.DateOfBirth.HasValue && student.DateOfBirth.Value >= DateTime.Now)
             throw new ArgumentException("Date of birth must be in the past.", nameof(student.DateOfBirth));
-
-        if (string.IsNullOrWhiteSpace(student.Gender))
-            throw new ArgumentException("Gender is required.", nameof(student.Gender));
-
-        if (string.IsNullOrWhiteSpace(student.Address))
-            throw new ArgumentException("Address is required.", nameof(student.Address));
-
-        if (string.IsNullOrWhiteSpace(student.MobileNumber))
-            throw new ArgumentException("Mobile number is required.", nameof(student.MobileNumber));
-
-        if (!IsValidPhoneNumber(student.MobileNumber))
+            
+        if (!string.IsNullOrWhiteSpace(student.MobileNumber) && !IsValidPhoneNumber(student.MobileNumber))
             throw new ArgumentException("Mobile number format is invalid.", nameof(student.MobileNumber));
-
+            
         if (!string.IsNullOrWhiteSpace(student.AlternateNumber) && !IsValidPhoneNumber(student.AlternateNumber))
             throw new ArgumentException("Alternate number format is invalid.", nameof(student.AlternateNumber));
-
-        if (string.IsNullOrWhiteSpace(student.Class))
-            throw new ArgumentException("Class is required.", nameof(student.Class));
-
-        if (string.IsNullOrWhiteSpace(student.IdProof))
-            throw new ArgumentException("ID proof is required.", nameof(student.IdProof));
-
-        if (string.IsNullOrWhiteSpace(student.ShiftType))
-            throw new ArgumentException("Shift type is required.", nameof(student.ShiftType));
-
-        if (student.SeatNumber <= 0)
-            throw new ArgumentException("Seat number must be greater than 0.", nameof(student.SeatNumber));
     }
 }

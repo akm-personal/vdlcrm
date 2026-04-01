@@ -14,28 +14,30 @@ public class AuthService
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly RegistrationService _registrationService;
 
-    public AuthService(AppDbContext context, IConfiguration configuration)
+    public AuthService(AppDbContext context, IConfiguration configuration, RegistrationService registrationService)
     {
         _context = context;
         _configuration = configuration;
+        _registrationService = registrationService;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         try
         {
-            // Find user by username
+            // Find user by username, email, or mobile number
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
+                .FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Username || (u.MobileNumber != null && u.MobileNumber == request.Username));
 
             if (user == null || !user.IsActive)
             {
                 return new LoginResponse
                 {
                     Success = false,
-                    Message = "Invalid username or user is inactive"
+                    Message = "Invalid credentials or user is inactive"
                 };
             }
 
@@ -48,6 +50,12 @@ public class AuthService
                     Message = "Invalid password"
                 };
             }
+
+            // StudentDetails table se Name fetch karein
+            var studentName = await _context.StudentDetails
+                .Where(s => s.Email == user.Email || s.VdlId == user.Username)
+                .Select(s => s.Name)
+                .FirstOrDefaultAsync();
 
             // Generate JWT token
             var token = GenerateJwtToken(user);
@@ -62,6 +70,7 @@ public class AuthService
                     Id = user.Id,
                     Username = user.Username,
                     Email = user.Email,
+                    Name = studentName,
                     RoleId = user.RoleId,
                     RoleName = user.Role?.RoleName ?? "Unknown",
                     IsActive = user.IsActive
@@ -83,16 +92,26 @@ public class AuthService
         try
         {
             // Check if user already exists
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Email);
+            var existingEmailUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-            if (existingUser != null)
+            if (existingEmailUser != null)
             {
                 return new LoginResponse
                 {
                     Success = false,
-                    Message = "Username or email already exists"
+                    Message = "Email already exists"
                 };
+            }
+
+            // Check if mobile number already exists (if provided)
+            if (!string.IsNullOrEmpty(request.MobileNumber))
+            {
+                var existingMobileUser = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                if (existingMobileUser != null)
+                {
+                    return new LoginResponse { Success = false, Message = "Mobile number already exists" };
+                }
             }
 
             // Validate role exists
@@ -108,14 +127,30 @@ public class AuthService
                 };
             }
 
+            // Generate VDL ID using RegistrationService
+            string generatedVdlId = await _registrationService.GenerateVdlIdAsync();
+
+            // Create an empty student record with just Name and Email
+            var newStudent = new Student
+            {
+                VdlId = generatedVdlId,
+                Name = request.Username, // Frontend username is saved as Student Name
+                Email = request.Email,
+                MobileNumber = request.MobileNumber,
+                CreatedDate = DateTime.UtcNow,
+                UpdatedDate = DateTime.UtcNow
+            };
+            _context.StudentDetails.Add(newStudent);
+
             // Hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             // Create new user
             var newUser = new User
             {
-                Username = request.Username,
+                Username = generatedVdlId, // Set Username as generated VDL ID
                 Email = request.Email,
+                MobileNumber = request.MobileNumber,
                 PasswordHash = passwordHash,
                 RoleId = request.RoleId,
                 IsActive = true,
@@ -129,7 +164,17 @@ public class AuthService
             return new LoginResponse
             {
                 Success = true,
-                Message = "User registered successfully"
+                Message = "User registered successfully",
+                User = new UserDto
+                {
+                    Id = newUser.Id,
+                    Username = newUser.Username,
+                    Email = newUser.Email,
+                    Name = newStudent.Name,
+                    RoleId = newUser.RoleId,
+                    RoleName = role.RoleName,
+                    IsActive = newUser.IsActive
+                }
             };
         }
         catch (Exception ex)
@@ -137,7 +182,7 @@ public class AuthService
             return new LoginResponse
             {
                 Success = false,
-                Message = $"Registration failed: {ex.Message}"
+                Message = $"Registration failed: {ex.InnerException?.Message ?? ex.Message}"
             };
         }
     }

@@ -110,23 +110,15 @@ public class RegistrationService
                 throw new ArgumentException("Student and email are required");
             }
 
-            // Generate username from email (e.g., john.doe@example.com → john.doe)
-            string baseUsername = student.Email.Split('@')[0].ToLower();
-            string username = baseUsername;
-
-            // Check if username already exists, append number if needed
-            int counter = 1;
-            while (await _context.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
-            {
-                username = $"{baseUsername}{counter}";
-                counter++;
-            }
+            // Use VDL ID as the username
+            string username = student.VdlId.ToUpper();
 
             // Create user account with Role ID 4 (Student)
             var user = new User
             {
                 Username = username,
                 Email = student.Email.ToLower(), // Case-insensitive email
+                MobileNumber = student.MobileNumber,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword),
                 RoleId = 4, // Student role
                 IsActive = true,

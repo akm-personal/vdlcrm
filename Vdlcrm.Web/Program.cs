@@ -6,13 +6,41 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using NSwag;
+using NSwag.Generation.Processors.Security;
+using NSwag.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+// NSwag Swagger generator for interactive UI at /swagger
+builder.Services.AddSwaggerDocument(config =>
+{
+    config.PostProcess = document =>
+    {
+        document.Info.Title = "VDLCRM API";
+        document.Info.Description = "API for VDLCRM Application.";
+    };
+    config.AddSecurity("Bearer", Enumerable.Empty<string>(), new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.ApiKey,
+        Name = "Authorization",
+        In = OpenApiSecurityApiKeyLocation.Header,
+        Description = "Type into the textbox: Bearer {your JWT token}."
+    });
+    config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
+});
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
 
 // Add database context
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -62,10 +90,9 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.MapOpenApi();
+app.UseOpenApi();
+app.UseSwaggerUi();
 // Commenting out HTTPS redirect for development purposes
 // app.UseHttpsRedirection();
 
@@ -83,6 +110,15 @@ app.MapGet("/database", async (AppDbContext db) =>
     var html = GetDatabaseBrowserHtml();
     return Results.Content(html, "text/html");
 });
+
+// API Testing UI endpoint
+app.MapGet("/api-docs", () =>
+{
+    var html = GetApiDocsHtml();
+    return Results.Content(html, "text/html");
+});
+
+app.UseCors("AllowAll");
 
 // Database viewer UI endpoint
 app.MapGet("/db-viewer", async (AppDbContext db) =>
@@ -167,7 +203,7 @@ app.MapGet("/db-viewer", async (AppDbContext db) =>
     ";
     
     return Results.Content(html, "text/html");
-});
+    });
 
 app.MapControllers();
 
@@ -247,7 +283,14 @@ string GetDatabaseBrowserHtml()
         async function loadTables() {
             try {
                 const response = await fetch('/api/databasebrowser/tables');
-                const data = await response.json();
+                const responseText = await response.text();
+                if (!responseText) {
+                    throw new Error('Empty response received. API endpoint /api/databasebrowser/tables might be missing or returning 404.');
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${responseText}`);
+                }
+                const data = JSON.parse(responseText);
                 const tableList = document.getElementById('tableList');
                 tableList.innerHTML = '';
                 
@@ -280,7 +323,9 @@ string GetDatabaseBrowserHtml()
             
             try {
                 const response = await fetch('/api/databasebrowser/table/' + currentTable);
-                const data = await response.json();
+                const responseText = await response.text();
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
+                const data = JSON.parse(responseText);
                 
                 if (data.rows.length === 0) {
                     dataContent.innerHTML = '<p>No records found</p>';
@@ -313,7 +358,9 @@ string GetDatabaseBrowserHtml()
             
             try {
                 const response = await fetch('/api/databasebrowser/schema/' + currentTable);
-                const data = await response.json();
+                const responseText = await response.text();
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
+                const data = JSON.parse(responseText);
                 
                 let html = '<h3>Columns</h3>';
                 html += data.columns.map(col => {
@@ -343,7 +390,9 @@ string GetDatabaseBrowserHtml()
                     body: JSON.stringify({ query: query })
                 });
                 
-                const data = await response.json();
+                const responseText = await response.text();
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
+                const data = JSON.parse(responseText);
                 
                 if (!data.success) {
                     resultDiv.innerHTML = '<div class=""error"">Error: ' + data.error + '</div>';
@@ -383,6 +432,320 @@ string GetDatabaseBrowserHtml()
         }
 
         loadTables();
+    </script>
+</body>
+</html>";
+}
+
+string GetApiDocsHtml()
+{
+    return @"<!DOCTYPE html> 
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>VDLCRM API Documentation & Testing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 30px; }
+        h1 { color: #333; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        
+        .api-section { margin-bottom: 40px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+        .api-header { background: #667eea; color: white; padding: 15px 20px; font-size: 18px; font-weight: bold; }
+        .api-content { padding: 20px; }
+        
+        .endpoint { margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #667eea; }
+        .method { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-right: 10px; }
+        .method.GET { background: #28a745; color: white; }
+        .method.POST { background: #007bff; color: white; }
+        .method.PUT { background: #ffc107; color: black; }
+        .method.DELETE { background: #dc3545; color: white; }
+        
+        .endpoint-url { font-family: monospace; font-size: 14px; margin: 5px 0; }
+        .endpoint-desc { color: #666; margin: 5px 0; }
+        
+        .test-form { margin-top: 15px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
+        textarea { resize: vertical; min-height: 100px; }
+        
+        .auth-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .auth-token { font-family: monospace; background: #f8f9fa; padding: 5px; border-radius: 3px; }
+        
+        button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #764ba2; }
+        button.test { background: #28a745; }
+        button.test:hover { background: #218838; }
+        
+        .response { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; }
+        .response pre { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+        
+        .status { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        
+        .tabs { display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; background: none; border: none; color: #666; }
+        .tab.active { color: #667eea; border-bottom: 3px solid #667eea; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .quick-links { text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; }
+        .quick-links a { color: #667eea; text-decoration: none; margin: 0 15px; }
+        .quick-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>🚀 VDLCRM API Documentation & Testing</h1>
+        <div class='subtitle'>Interactive API testing interface for all VDLCRM endpoints</div>
+        
+        <div class='auth-section'>
+            <h3>🔐 Authentication</h3>
+            <p>For protected endpoints, you need a JWT token. Get one by calling the login endpoint first.</p>
+            <div class='form-group'>
+                <label>Authorization Token (include 'Bearer ' prefix):</label>
+                <input type='text' id='authToken' placeholder='Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' />
+            </div>
+        </div>
+        
+        <div class='tabs'>
+            <button class='tab active' onclick='switchTab(""auth"")'>Authentication</button>
+            <button class='tab' onclick='switchTab(""students"")'>Student Management</button>
+            <button class='tab' onclick='switchTab(""utility"")'>Utility</button>
+        </div>
+        
+        <div id='auth' class='tab-content active'>
+            <div class='api-section'>
+                <div class='api-header'>🔐 Authentication Endpoints</div>
+                <div class='api-content'>
+                    
+                    <div class='endpoint'>
+                        <span class='method POST'>POST</span> Register User
+                        <div class='endpoint-url'>/api/auth/register</div>
+                        <div class='endpoint-desc'>Register a new user account</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Request Body (JSON):</label>
+                                <textarea id='registerBody' placeholder='Enter JSON...'>{
+  ""username"": ""testuser"",
+  ""email"": ""test@example.com"",
+  ""password"": ""TestPass123!@#"",
+  ""roleId"": 4
+}</textarea>
+                            </div>
+                            <button class='test' onclick='testEndpoint(""POST"", ""/api/auth/register"", document.getElementById(""registerBody"").value, ""registerResult"")'>Test Register</button>
+                            <div id='registerResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method POST'>POST</span> Login
+                        <div class='endpoint-url'>/api/auth/login</div>
+                        <div class='endpoint-desc'>Authenticate and get JWT token</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Request Body (JSON):</label>
+                                <textarea id='loginBody' placeholder='Enter JSON...'>{
+  ""username"": ""testuser"",
+  ""password"": ""TestPass123!@#""
+}</textarea>
+                            </div>
+                            <button class='test' onclick='testEndpoint(""POST"", ""/api/auth/login"", document.getElementById(""loginBody"").value, ""loginResult"")'>Test Login</button>
+                            <div id='loginResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method GET'>GET</span> Get Roles
+                        <div class='endpoint-url'>/api/auth/roles</div>
+                        <div class='endpoint-desc'>Get all available roles (requires authentication)</div>
+                        <div class='test-form'>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/auth/roles"", null, ""rolesResult"")'>Test Get Roles</button>
+                            <div id='rolesResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method POST'>POST</span> Update Password
+                        <div class='endpoint-url'>/api/auth/update-password</div>
+                        <div class='endpoint-desc'>Update temporary password to permanent password</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Request Body (JSON):</label>
+                                <textarea id='updatePasswordBody' placeholder='Enter JSON...'>{
+  ""userId"": 1,
+  ""tempPassword"": ""TempPass123"",
+  ""newPassword"": ""NewPass123!@#""
+}</textarea>
+                            </div>
+                            <button class='test' onclick='testEndpoint(""POST"", ""/api/auth/update-password"", document.getElementById(""updatePasswordBody"").value, ""updatePasswordResult"")'>Test Update Password</button>
+                            <div id='updatePasswordResult' class='response'></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        <div id='students' class='tab-content'>
+            <div class='api-section'>
+                <div class='api-header'>👨‍🎓 Student Management Endpoints</div>
+                <div class='api-content'>
+                    
+                    <div class='endpoint'>
+                        <span class='method POST'>POST</span> Register Student
+                        <div class='endpoint-url'>/api/student/register</div>
+                        <div class='endpoint-desc'>Register a new student (auto-generates VDL ID)</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Request Body (JSON):</label>
+                                <textarea id='studentRegisterBody' placeholder='Enter JSON...'>{
+  ""name"": ""John Doe"",
+  ""email"": ""john.doe@example.com"",
+  ""fatherName"": ""James Doe"",
+  ""dateOfBirth"": ""2005-05-15"",
+  ""gender"": ""Male"",
+  ""address"": ""123 Main St"",
+  ""mobileNumber"": ""9876543210"",
+  ""alternateNumber"": ""9876543211"",
+  ""class"": ""10A"",
+  ""idProof"": ""Aadhar"",
+  ""shiftType"": ""Morning"",
+  ""seatNumber"": 1,
+  ""studentStatus"": ""Active""
+}</textarea>
+                            </div>
+                            <button class='test' onclick='testEndpoint(""POST"", ""/api/student/register"", document.getElementById(""studentRegisterBody"").value, ""studentRegisterResult"")'>Test Register Student</button>
+                            <div id='studentRegisterResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method GET'>GET</span> Get All Students
+                        <div class='endpoint-url'>/api/StudentList</div>
+                        <div class='endpoint-desc'>Get all registered students (Admin/Internal only)</div>
+                        <div class='test-form'>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/StudentList"", null, ""studentsResult"")'>Test Get Students</button>
+                            <div id='studentsResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method GET'>GET</span> Get Student by ID
+                        <div class='endpoint-url'>/api/student/{id}</div>
+                        <div class='endpoint-desc'>Get specific student details</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Student ID:</label>
+                                <input type='number' id='studentId' placeholder='Enter student ID' />
+                            </div>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/student/"" + document.getElementById(""studentId"").value, null, ""studentResult"")'>Test Get Student</button>
+                            <div id='studentResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div id='utility' class='tab-content'>
+            <div class='api-section'>
+                <div class='api-header'>🌤️ Utility Endpoints</div>
+                <div class='api-content'>
+                    
+                    <div class='endpoint'>
+                        <span class='method GET'>GET</span> Weather Forecast
+                        <div class='endpoint-url'>/api/weatherforecast/GetWeatherForecast</div>
+                        <div class='endpoint-desc'>Get sample weather forecast data</div>
+                        <div class='test-form'>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/weatherforecast/GetWeatherForecast"", null, ""weatherResult"")'>Test Weather</button>
+                            <div id='weatherResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method GET'>GET</span> Database Tables
+                        <div class='endpoint-url'>/api/databasebrowser/tables</div>
+                        <div class='endpoint-desc'>Get list of all database tables</div>
+                        <div class='test-form'>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/databasebrowser/tables"", null, ""tablesResult"")'>Test Get Tables</button>
+                            <div id='tablesResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div class='quick-links'>
+            <h3>🔗 Quick Links</h3>
+            <a href='/'>🏠 Home</a>
+            <a href='/database'>🗄️ Database Browser</a>
+            <a href='/db-viewer'>📊 Database Viewer</a>
+            <a href='/openapi/v1.json' target='_blank'>📄 OpenAPI JSON</a>
+            <a href='/swagger' target='_blank'>🧩 Swagger UI</a>
+        </div>
+    </div>
+
+    <script>
+        async function testEndpoint(method, url, body, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = '<p>⏳ Loading...</p>';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const authToken = document.getElementById('authToken').value;
+                if (authToken) {
+                    headers['Authorization'] = authToken;
+                }
+                
+                const options = {
+                    method: method,
+                    headers: headers
+                };
+                
+                if (body && method !== 'GET') {
+                    options.body = body;
+                }
+                
+                const response = await fetch(url, options);
+                const statusClass = response.ok ? 'success' : 'error';
+                const statusText = response.ok ? '✅ Success' : '❌ Error';
+                
+                let responseText = '';
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const jsonData = await response.json();
+                    responseText = JSON.stringify(jsonData, null, 2);
+                } else {
+                    responseText = await response.text();
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class='status ${statusClass}'>${statusText} (${response.status})</div>
+                    <pre>${responseText}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class='status error'>❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
     </script>
 </body>
 </html>";

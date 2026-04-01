@@ -96,7 +96,7 @@ public class StudentController : ControllerBase
     /// Get all registered students (Admin and Internal User only)
     /// </summary>
     /// <returns>List of all students</returns>
-    [HttpGet]
+    [HttpGet("/api/StudentList")]
     [Authorize(Roles = "Admin,Internal User")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

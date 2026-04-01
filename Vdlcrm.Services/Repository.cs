@@ -1,39 +1,50 @@
+using Microsoft.EntityFrameworkCore;
 using Vdlcrm.Interfaces;
 
 namespace Vdlcrm.Services;
 
 public class Repository<T> : IRepository<T> where T : class
 {
-    private readonly List<T> _entities = [];
+    private readonly AppDbContext _context;
+    private readonly DbSet<T> _dbSet;
+
+    public Repository(AppDbContext context)
+    {
+        _context = context;
+        _dbSet = context.Set<T>();
+    }
 
     public async Task<T?> GetByIdAsync(int id)
     {
-        await Task.Delay(0); // Simulate async operation
-        return _entities.FirstOrDefault();
+        return await _dbSet.FindAsync(id);
     }
 
     public async Task<IEnumerable<T>> GetAllAsync()
     {
-        await Task.Delay(0); // Simulate async operation
-        return _entities.AsEnumerable();
+        return await _dbSet.ToListAsync();
     }
 
     public async Task<T> AddAsync(T entity)
     {
-        await Task.Delay(0); // Simulate async operation
-        _entities.Add(entity);
+        await _dbSet.AddAsync(entity);
+        await _context.SaveChangesAsync();
         return entity;
     }
 
     public async Task<T> UpdateAsync(T entity)
     {
-        await Task.Delay(0); // Simulate async operation
+        _dbSet.Update(entity);
+        await _context.SaveChangesAsync();
         return entity;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        await Task.Delay(0); // Simulate async operation
+        var entity = await _dbSet.FindAsync(id);
+        if (entity == null) return false;
+        
+        _dbSet.Remove(entity);
+        await _context.SaveChangesAsync();
         return true;
     }
 }

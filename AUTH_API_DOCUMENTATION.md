@@ -104,7 +104,15 @@ CREATE TABLE users (
   "success": true,
   "message": "User registered successfully",
   "token": null,
-  "user": null
+  "user": {
+    "id": 2,
+    "username": "VDL001",
+    "email": "newuser@example.com",
+    "name": "newuser",
+    "roleId": 4,
+    "roleName": "Student",
+    "isActive": true
+  }
 }
 ```
 
@@ -199,7 +207,7 @@ curl -X GET "http://localhost:5000/api/student" \
 | Endpoint | Method | Required Role | Access |
 |----------|--------|---------------|--------|
 | `/api/student/register` | POST | None | Public (No authentication required) |
-| `/api/student` | GET | Admin, Internal User | Protected |
+| `/api/StudentList` | GET | Admin, Internal User | Protected |
 | `/api/student/{id}` | GET | Any Authenticated User | Protected |
 | `/api/student/{id}` | PUT | Admin | Protected |
 | `/api/student/{id}` | DELETE | Admin | Protected |
@@ -271,7 +279,7 @@ Content-Type: application/json
 GET http://localhost:5000/api/auth/roles
 
 ### Get All Students (Admin/Internal User Only)
-GET http://localhost:5000/api/student
+GET http://localhost:5000/api/StudentList
 Authorization: Bearer <YOUR_JWT_TOKEN>
 
 ### Get Student by ID
