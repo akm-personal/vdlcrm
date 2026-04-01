@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Vdlcrm.Model.DTOs;
 using Vdlcrm.Services;
 
@@ -178,5 +179,26 @@ public class AuthController : ControllerBase
                 UserId = request.UserId
             });
         }
+    }
+
+    /// <summary>
+    /// Logout user (requires authentication token)
+    /// </summary>
+    /// <returns>Logout success message</returns>
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    public ActionResult<object> Logout()
+    {
+        // Extract user information from the JWT Token claims
+        var username = User.Identity?.Name ?? "Unknown User";
+        var userId = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+        _logger.LogInformation($"Logout endpoint called by User ID: {userId}, Username: {username}");
+        
+        // Note: Since this API uses stateless JWTs, the actual logout happens on the client side
+        // by deleting the token from localStorage, sessionStorage, or cookies.
+        // To enforce server-side logout in the future, you would implement a Token Blacklist here.
+        return Ok(new { success = true, message = $"User '{username}' logged out successfully. Please remove the token from the client application." });
     }
 }
