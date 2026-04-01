@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vdlcrm.Services;
 
@@ -10,9 +11,11 @@ using Vdlcrm.Services;
 namespace Vdlcrm.Services.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322125748_ReorderStudentColumns")]
+    partial class ReorderStudentColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
@@ -150,10 +153,6 @@ namespace Vdlcrm.Services.Migrations
                     b.Property<bool>("IsPasswordChangedFromTemp")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("MobileNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -170,9 +169,6 @@ namespace Vdlcrm.Services.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("MobileNumber")
-                        .IsUnique();
 
                     b.HasIndex("RoleId");
 

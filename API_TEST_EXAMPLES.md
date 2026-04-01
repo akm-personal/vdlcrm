@@ -118,7 +118,7 @@ GET http://localhost:5000/api/auth/roles
 **Replace TOKEN with your actual JWT token from login response**
 
 ```http
-GET http://localhost:5000/api/student
+GET http://localhost:5000/api/StudentList
 Authorization: Bearer TOKEN
 
 ```

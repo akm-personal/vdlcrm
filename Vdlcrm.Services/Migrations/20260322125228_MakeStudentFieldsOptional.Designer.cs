@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vdlcrm.Services;
 
@@ -10,9 +11,11 @@ using Vdlcrm.Services;
 namespace Vdlcrm.Services.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322125228_MakeStudentFieldsOptional")]
+    partial class MakeStudentFieldsOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
@@ -43,87 +46,70 @@ namespace Vdlcrm.Services.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasColumnOrder(0);
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Address")
                         .HasMaxLength(255)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(8);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AlternateNumber")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(9);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Class")
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(10);
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(15);
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(11);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(3);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("FatherName")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(4);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Gender")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(5);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("IdProof")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(12);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MobileNumber")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(13);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(2);
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("SeatNumber")
-                        .HasColumnType("INTEGER")
-                        .HasColumnOrder(6);
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ShiftType")
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(7);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("StudentStatus")
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(14);
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedDate")
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(16);
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("VdlId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .HasColumnOrder(1);
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -150,10 +136,6 @@ namespace Vdlcrm.Services.Migrations
                     b.Property<bool>("IsPasswordChangedFromTemp")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("MobileNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -170,9 +152,6 @@ namespace Vdlcrm.Services.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("MobileNumber")
-                        .IsUnique();
 
                     b.HasIndex("RoleId");
 
