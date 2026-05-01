@@ -1,0 +1,26 @@
+[
+  {
+    "shiftName": "Morning Shift",
+    "status": 1,
+    "startTime": "06:00 AM",
+    "endTime": "12:00 PM"
+  },
+  {
+    "shiftName": "Afternoon Shift",
+    "status": 1,
+    "startTime": "12:00 PM",
+    "endTime": "06:00 PM"
+  },
+  {
+    "shiftName": "Evening Shift",
+    "status": 1,
+    "startTime": "06:00 PM",
+    "endTime": "11:00 PM"
+  },
+  {
+    "shiftName": "Night Shift",
+    "status": 0,
+    "startTime": "11:00 PM",
+    "endTime": "06:00 AM"
+  }
+]

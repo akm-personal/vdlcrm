@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Vdlcrm.Model.DTOs;
 using Vdlcrm.Services;
 
@@ -11,12 +12,14 @@ public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
         private readonly PasswordUpdateService _passwordUpdateService;
+    private readonly AppDbContext _dbContext;
     private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AuthService authService, PasswordUpdateService passwordUpdateService, ILogger<AuthController> logger)
+    public AuthController(AuthService authService, PasswordUpdateService passwordUpdateService, AppDbContext dbContext, ILogger<AuthController> logger)
     {
         _authService = authService;
             _passwordUpdateService = passwordUpdateService;
+        _dbContext = dbContext;
         _logger = logger;
     }
 
@@ -72,6 +75,31 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation($"Successful registration for user: {request.Username}");
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Swagger UI auto-login endpoint (OAuth2 Password Flow)
+    /// </summary>
+    [HttpPost("swagger-login")]
+    [Consumes("application/x-www-form-urlencoded")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> SwaggerLogin([FromForm] string username, [FromForm] string password)
+    {
+        var request = new LoginRequest { Username = username, Password = password };
+        var response = await _authService.LoginAsync(request);
+
+        if (!response.Success)
+        {
+            _logger.LogWarning($"Swagger login failed for user: {username}");
+            return Unauthorized(new { error = "invalid_grant", error_description = "Invalid username or password" });
+        }
+
+        return Ok(new
+        {
+            access_token = response.Token,
+            token_type = "Bearer",
+            expires_in = 3600
+        });
     }
 
     /// <summary>
