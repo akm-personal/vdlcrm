@@ -59,7 +59,7 @@ builder.Services.AddScoped<RegistrationService>();  // Add RegistrationService f
 builder.Services.AddScoped<PasswordUpdateService>();  // Add PasswordUpdateService for password updates
 builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift management
 builder.Services.AddScoped<ErrorLoggingService>();
-builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor(); 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "default-secret-key-that-is-long-enough";
