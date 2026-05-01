@@ -126,39 +126,47 @@ public class DatabaseBrowserController : ControllerBase
             var connection = _dbContext.Database.GetDbConnection();
             await connection.OpenAsync();
 
-            // Check if it's a SELECT query
             var query = request.Query.Trim();
-            if (!query.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { error = "Only SELECT queries are allowed" });
+            bool isSelect = query.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) || 
+                            query.StartsWith("PRAGMA", StringComparison.OrdinalIgnoreCase);
 
             var rows = new List<Dictionary<string, object?>>();
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = query;
-                using (var result = await command.ExecuteReaderAsync())
+                
+                if (isSelect)
                 {
-                    var columns = new List<string>();
-                    for (int i = 0; i < result.FieldCount; i++)
+                    using (var result = await command.ExecuteReaderAsync())
                     {
-                        columns.Add(result.GetName(i));
-                    }
-
-                    while (await result.ReadAsync())
-                    {
-                        var row = new Dictionary<string, object?>();
-                        for (int i = 0; i < columns.Count; i++)
+                        var columns = new List<string>();
+                        for (int i = 0; i < result.FieldCount; i++)
                         {
-                            row[columns[i]] = result.IsDBNull(i) ? null : result.GetValue(i);
+                            columns.Add(result.GetName(i));
                         }
-                        rows.Add(row);
-                    }
 
-                    return Ok(new
-                    {
-                        success = true,
-                        rowCount = rows.Count,
-                        rows
-                    });
+                        while (await result.ReadAsync())
+                        {
+                            var row = new Dictionary<string, object?>();
+                            for (int i = 0; i < columns.Count; i++)
+                            {
+                                row[columns[i]] = result.IsDBNull(i) ? null : result.GetValue(i);
+                            }
+                            rows.Add(row);
+                        }
+
+                        return Ok(new
+                        {
+                            success = true,
+                            rowCount = rows.Count,
+                            rows
+                        });
+                    }
+                }
+                else
+                {
+                    var rowsAffected = await command.ExecuteNonQueryAsync();
+                    return Ok(new { success = true, rowCount = rowsAffected, message = $"Query executed successfully. {rowsAffected} row(s) affected." });
                 }
             }
         }
@@ -166,6 +174,37 @@ public class DatabaseBrowserController : ControllerBase
         {
             return StatusCode(StatusCodes.Status500InternalServerError, 
                 new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Truncate table and reset auto-increment identity
+    /// </summary>
+    [HttpPost("truncate/{tableName}")]
+    public async Task<ActionResult<object>> TruncateTable(string tableName)
+    {
+        try
+        {
+            if (!IsValidTableName(tableName))
+                return BadRequest(new { error = "Invalid table name" });
+
+            var connection = _dbContext.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $"DELETE FROM [{tableName}];";
+                await command.ExecuteNonQueryAsync();
+                
+                command.CommandText = $"DELETE FROM sqlite_sequence WHERE name='{tableName}';";
+                try { await command.ExecuteNonQueryAsync(); } catch { /* Ignore if sqlite_sequence doesn't exist */ }
+            }
+
+            return Ok(new { success = true, message = $"Table {tableName} truncated successfully and indexing reset to 1." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
     }
 

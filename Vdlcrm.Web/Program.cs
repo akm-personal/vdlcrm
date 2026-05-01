@@ -9,6 +9,7 @@ using System.Text;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using NSwag.AspNetCore;
+using Vdlcrm.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,10 +26,10 @@ builder.Services.AddSwaggerDocument(config =>
     };
     config.AddSecurity("Bearer", Enumerable.Empty<string>(), new OpenApiSecurityScheme
     {
-        Type = OpenApiSecuritySchemeType.ApiKey,
-        Name = "Authorization",
-        In = OpenApiSecurityApiKeyLocation.Header,
-        Description = "Type into the textbox: Bearer {your JWT token}."
+        Type = OpenApiSecuritySchemeType.OAuth2,
+        Description = "Enter your Username and Password to automatically generate and use the JWT token.",
+        Flow = OpenApiOAuth2Flow.Password,
+        TokenUrl = "/api/auth/swagger-login"
     });
     config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
 });
@@ -55,8 +56,10 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RegistrationService>();  // Add RegistrationService for bulk student registration
-
 builder.Services.AddScoped<PasswordUpdateService>();  // Add PasswordUpdateService for password updates
+builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift management
+builder.Services.AddScoped<ErrorLoggingService>();
+builder.Services.AddHttpContextAccessor();
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "default-secret-key-that-is-long-enough";
@@ -96,6 +99,9 @@ app.UseSwaggerUi();
 // Commenting out HTTPS redirect for development purposes
 // app.UseHttpsRedirection();
 
+// Add global exception handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
@@ -108,14 +114,14 @@ app.MapGet("/database", async (AppDbContext db) =>
 {
     var dbFile = Path.Combine(AppContext.BaseDirectory, "vdlcrm.db");
     var html = GetDatabaseBrowserHtml();
-    return Results.Content(html, "text/html");
+    return Results.Content(html, "text/html; charset=utf-8");
 });
 
 // API Testing UI endpoint
 app.MapGet("/api-docs", () =>
 {
     var html = GetApiDocsHtml();
-    return Results.Content(html, "text/html");
+    return Results.Content(html, "text/html; charset=utf-8");
 });
 
 app.UseCors("AllowAll");
@@ -129,6 +135,7 @@ app.MapGet("/db-viewer", async (AppDbContext db) =>
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset='UTF-8'>
     <title>Database Viewer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -202,7 +209,7 @@ app.MapGet("/db-viewer", async (AppDbContext db) =>
 </html>
     ";
     
-    return Results.Content(html, "text/html");
+    return Results.Content(html, "text/html; charset=utf-8");
     });
 
 app.MapControllers();
@@ -212,6 +219,7 @@ string GetDatabaseBrowserHtml()
     return @"<!DOCTYPE html>
 <html>
 <head>
+    <meta charset='UTF-8'>
     <title>Database Browser - VDLCRM</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -220,7 +228,7 @@ string GetDatabaseBrowserHtml()
         h1 { color: #333; margin-bottom: 10px; }
         .layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; margin-top: 20px; }
         .sidebar { background: #f5f5f5; padding: 20px; border-radius: 8px; }
-        .main { padding: 20px; }
+        .main { padding: 20px; min-width: 0; overflow-x: hidden; }
         .table-list { list-style: none; }
         .table-item { padding: 10px; margin: 5px 0; background: white; border-left: 3px solid #667eea; cursor: pointer; border-radius: 4px; }
         .table-item:hover { background: #e8e8ff; }
@@ -230,21 +238,41 @@ string GetDatabaseBrowserHtml()
         .tab.active { color: #667eea; border-bottom: 3px solid #667eea; }
         .tab-content { display: none; margin-top: 20px; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #667eea; color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .table-responsive { display: block; overflow-x: auto; max-width: 100%; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #667eea; color: white; padding: 12px; text-align: left; white-space: nowrap; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; white-space: nowrap; }
         tr:hover { background: #f0f0f0; }
         textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
         button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #764ba2; }
+
+        .btn-small { padding: 5px 10px; margin-top: 0; font-size: 12px; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
         .error { color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 4px; margin: 10px 0; }
         .success { color: #388e3c; background: #e8f5e9; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .auth-container { max-width: 400px; margin: 40px auto; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .auth-container input { display: block; width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
     <div class='container'>
-        <h1>Database Browser - VDLCRM</h1>
-        <div class='layout'>
+        <div style='display:flex; justify-content:space-between; align-items:center;'>
+            <h1>Database Browser - VDLCRM</h1>
+            <button id='logoutBtn' style='display:none;' onclick='logout()' class='btn-small btn-danger'>Logout Admin</button>
+        </div>
+
+        <div id='authSection' class='auth-container'>
+            <h3>🔐 Admin Login Required</h3>
+            <p style='font-size:12px; color:#666; margin-bottom:15px;'>Please login with an Admin account to access the database.</p>
+            <input type='text' id='adminUsername' placeholder='Username' />
+            <input type='password' id='adminPassword' placeholder='Password' />
+            <button onclick='adminLogin()' style='width:100%'>Login</button>
+            <div id='authError' class='error' style='display:none;'></div>
+        </div>
+
+        <div class='layout' id='mainLayout' style='display:none;'>
             <div class='sidebar'>
                 <h3>Database Tables</h3>
                 <ul class='table-list' id='tableList'>
@@ -268,8 +296,8 @@ string GetDatabaseBrowserHtml()
                 </div>
                 
                 <div id='query' class='tab-content'>
-                    <h3>Execute SQL Query (SELECT only)</h3>
-                    <textarea id='queryInput' rows='6' placeholder='Enter your SELECT query here...'></textarea>
+                    <h3>Execute SQL Query (SELECT, INSERT, UPDATE, DELETE)</h3>
+                    <textarea id='queryInput' rows='6' placeholder='Enter your SQL query here...'></textarea>
                     <button onclick='executeQuery()'>Run Query</button>
                     <div id='queryResult'></div>
                 </div>
@@ -279,10 +307,59 @@ string GetDatabaseBrowserHtml()
 
     <script>
         let currentTable = null;
+        let authToken = localStorage.getItem('vdlcrm_db_token');
+
+        function checkAuth() {
+            if (authToken) {
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('mainLayout').style.display = 'grid';
+                document.getElementById('logoutBtn').style.display = 'block';
+                loadTables();
+            } else {
+                document.getElementById('authSection').style.display = 'block';
+                document.getElementById('mainLayout').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        }
+
+        async function adminLogin() {
+            const u = document.getElementById('adminUsername').value;
+            const p = document.getElementById('adminPassword').value;
+            const errDiv = document.getElementById('authError');
+            errDiv.style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                
+                if (data.success && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('vdlcrm_db_token', authToken);
+                    checkAuth();
+                } else {
+                    errDiv.textContent = data.message || 'Invalid credentials.';
+                    errDiv.style.display = 'block';
+                }
+            } catch(e) {
+                errDiv.textContent = 'Connection error.';
+                errDiv.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('vdlcrm_db_token');
+            checkAuth();
+        }
 
         async function loadTables() {
             try {
-                const response = await fetch('/api/databasebrowser/tables');
+                const response = await fetch('/api/databasebrowser/tables', { headers: { 'Authorization': 'Bearer ' + authToken } });
+                if (response.status === 401 || response.status === 403) { logout(); alert('Session expired or access denied.'); return; }
                 const responseText = await response.text();
                 if (!responseText) {
                     throw new Error('Empty response received. API endpoint /api/databasebrowser/tables might be missing or returning 404.');
@@ -322,19 +399,39 @@ string GetDatabaseBrowserHtml()
             dataContent.innerHTML = 'Loading...';
             
             try {
-                const response = await fetch('/api/databasebrowser/table/' + currentTable);
+                let pkCol = null;
+                try {
+                    const schemaResponse = await fetch('/api/databasebrowser/schema/' + currentTable, { headers: { 'Authorization': 'Bearer ' + authToken } });
+                    if (schemaResponse.ok) {
+                        const schemaData = await schemaResponse.json();
+                        const pkField = schemaData.columns.find(c => c.pk);
+                        if (pkField) pkCol = pkField.name;
+                    }
+                } catch (e) { console.error('Error fetching schema:', e); }
+
+                const response = await fetch('/api/databasebrowser/table/' + currentTable, { headers: { 'Authorization': 'Bearer ' + authToken } });
+                if (response.status === 401 || response.status === 403) { logout(); alert('Session expired or access denied.'); return; }
                 const responseText = await response.text();
                 if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
                 const data = JSON.parse(responseText);
                 
                 if (data.rows.length === 0) {
-                    dataContent.innerHTML = '<p>No records found</p>';
+                    dataContent.innerHTML = `
+                        <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
+                            <p>No records found</p>
+                            <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
+                        </div>`;
                     return;
                 }
                 
-                let html = '<p>Total: ' + data.rowCount + ' records</p>';
-                html += '<table><thead><tr>';
+                let html = `
+                    <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
+                        <p>Total: ${data.rowCount} records</p>
+                        <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
+                    </div>`;
+                html += '<div class=""table-responsive""><table><thead><tr>';
                 data.columns.forEach(col => html += '<th>' + col + '</th>');
+                if (pkCol) html += '<th>Actions</th>';
                 html += '</tr></thead><tbody>';
                 
                 data.rows.forEach(row => {
@@ -343,10 +440,18 @@ string GetDatabaseBrowserHtml()
                         const val = row[col];
                         html += '<td>' + (val === null ? 'NULL' : val) + '</td>';
                     });
+                    if (pkCol) {
+                        const pkVal = row[pkCol];
+                        const rowJsonStr = encodeURIComponent(JSON.stringify(row));
+                        html += `<td>
+                            <button class=""btn-small"" onclick=""editRow('${pkCol}', '${pkVal}', '${rowJsonStr}')"">Edit</button>
+                            <button class=""btn-small btn-danger"" onclick=""deleteRow('${pkCol}', '${pkVal}')"">Delete</button>
+                        </td>`;
+                    }
                     html += '</tr>';
                 });
                 
-                html += '</tbody></table>';
+                html += '</tbody></table></div>';
                 dataContent.innerHTML = html;
             } catch (error) {
                 dataContent.innerHTML = '<div class=""error"">Error: ' + error.message + '</div>';
@@ -357,7 +462,8 @@ string GetDatabaseBrowserHtml()
             if (!currentTable) return;
             
             try {
-                const response = await fetch('/api/databasebrowser/schema/' + currentTable);
+                const response = await fetch('/api/databasebrowser/schema/' + currentTable, { headers: { 'Authorization': 'Bearer ' + authToken } });
+                if (response.status === 401 || response.status === 403) { logout(); alert('Session expired or access denied.'); return; }
                 const responseText = await response.text();
                 if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
                 const data = JSON.parse(responseText);
@@ -386,7 +492,7 @@ string GetDatabaseBrowserHtml()
             try {
                 const response = await fetch('/api/databasebrowser/query', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
                     body: JSON.stringify({ query: query })
                 });
                 
@@ -399,13 +505,18 @@ string GetDatabaseBrowserHtml()
                     return;
                 }
                 
+                if (data.message) {
+                    resultDiv.innerHTML = '<div class=""success"">' + data.message + '</div>';
+                    return;
+                }
+
                 if (data.rows.length === 0) {
                     resultDiv.innerHTML = '<div class=""success"">Query executed - 0 rows</div>';
                     return;
                 }
                 
                 let html = '<div class=""success"">Results: ' + data.rowCount + ' rows</div>';
-                html += '<table><thead><tr>';
+                html += '<div class=""table-responsive""><table><thead><tr>';
                 Object.keys(data.rows[0]).forEach(col => html += '<th>' + col + '</th>');
                 html += '</tr></thead><tbody>';
                 
@@ -417,7 +528,7 @@ string GetDatabaseBrowserHtml()
                     html += '</tr>';
                 });
                 
-                html += '</tbody></table>';
+                html += '</tbody></table></div>';
                 resultDiv.innerHTML = html;
             } catch (error) {
                 resultDiv.innerHTML = '<div class=""error"">Error: ' + error.message + '</div>';
@@ -431,7 +542,58 @@ string GetDatabaseBrowserHtml()
             event.target.classList.add('active');
         }
 
-        loadTables();
+            function editRow(pkCol, pkVal, rowJsonStr) {
+                const row = JSON.parse(decodeURIComponent(rowJsonStr));
+                let setClause = Object.keys(row)
+                    .filter(k => k !== pkCol)
+                    .map(k => {
+                        if (row[k] === null) return `[${k}] = NULL`;
+                        return `[${k}] = '${String(row[k]).replace(/'/g, ""''"")}'`;
+                    })
+                    .join(',\n    ');
+                
+                const query = `UPDATE [${currentTable}]\nSET ${setClause}\nWHERE [${pkCol}] = '${pkVal}';`;
+                document.getElementById('queryInput').value = query;
+                
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+                document.getElementById('query').classList.add('active');
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                
+                document.getElementById('queryInput').scrollIntoView({behavior: 'smooth'});
+            }
+
+            async function deleteRow(pkCol, pkVal) {
+                if(!confirm(`Are you sure you want to delete this row where ${pkCol} = ${pkVal}?`)) return;
+                const query = `DELETE FROM [${currentTable}] WHERE [${pkCol}] = '${pkVal}';`;
+                
+                try {
+                    const response = await fetch('/api/databasebrowser/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                        body: JSON.stringify({ query: query })
+                    });
+                    const data = await response.json();
+                    if(!data.success) alert('Error: ' + data.error);
+                    else loadTableData();
+                } catch(e) { alert('Error: ' + e.message); }
+            }
+
+            async function truncateTable(tableName) {
+                if(!confirm(`WARNING: Are you sure you want to TRUNCATE table ${tableName}?\n\nThis will DELETE ALL DATA and RESET the auto-increment ID to 1.\n\nThis action CANNOT BE UNDONE!`)) return;
+                
+                try {
+                    const response = await fetch('/api/databasebrowser/truncate/' + tableName, { 
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + authToken }
+                    });
+                    const data = await response.json();
+                    if(data.success) { alert(data.message); loadTableData(); }
+                    else alert('Error: ' + data.error);
+                } catch(e) { alert('Error: ' + e.message); }
+            }
+
+        checkAuth();
     </script>
 </body>
 </html>";
@@ -635,13 +797,13 @@ string GetApiDocsHtml()
                     </div>
                     
                     <div class='endpoint'>
-                        <span class='method GET'>GET</span> Get Student by ID
-                        <div class='endpoint-url'>/api/student/{id}</div>
-                        <div class='endpoint-desc'>Get specific student details</div>
+                        <span class='method GET'>GET</span> Get Student by VDL ID
+                        <div class='endpoint-url'>/api/student/{vdlId}</div>
+                        <div class='endpoint-desc'>Get specific student details by VDL ID</div>
                         <div class='test-form'>
                             <div class='form-group'>
-                                <label>Student ID:</label>
-                                <input type='number' id='studentId' placeholder='Enter student ID' />
+                                <label>Student VDL ID:</label>
+                                <input type='text' id='studentId' placeholder='Enter VDL ID (e.g., VDL001)' />
                             </div>
                             <button class='test' onclick='testEndpoint(""GET"", ""/api/student/"" + document.getElementById(""studentId"").value, null, ""studentResult"")'>Test Get Student</button>
                             <div id='studentResult' class='response'></div>
