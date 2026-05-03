@@ -30,7 +30,7 @@ public class GlobalExceptionMiddleware
             _logger.LogError(ex, "An unhandled exception occurred in the application.");
             
             // Log ANY exception directly to the ExceptionHistory database table
-            await errorLoggingService.LogExceptionAsync(ex, context);
+            await errorLoggingService.LogExceptionAsync(ex, context.Request.Path);
 
             // Return a graceful error response to the client
             await HandleExceptionAsync(context);

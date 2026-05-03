@@ -58,6 +58,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RegistrationService>();  // Add RegistrationService for bulk student registration
 builder.Services.AddScoped<PasswordUpdateService>();  // Add PasswordUpdateService for password updates
 builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift management
+builder.Services.AddScoped<FeeService>();  // Add FeeService for fee management
 builder.Services.AddScoped<ErrorLoggingService>();
 builder.Services.AddHttpContextAccessor(); 
 // Add JWT Authentication

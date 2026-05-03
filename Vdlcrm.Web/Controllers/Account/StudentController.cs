@@ -253,7 +253,7 @@ public class StudentController : ControllerBase
 
         try
         {
-            var deleted = await _studentService.DeleteStudentAsync(vdlId);
+            var deleted = await _studentService.DeleteStudentByVdlIdAsync(vdlId);
             if (!deleted)
             {
                 return NotFound(new { message = $"Student with VDL ID '{vdlId}' not found." });

@@ -30,7 +30,7 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception caught by exception handling middleware.");
-            await _errorLoggingService.LogExceptionAsync(ex, context);
+            await _errorLoggingService.LogExceptionAsync(ex, context.Request.Path);
 
             if (!context.Response.HasStarted)
             {

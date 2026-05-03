@@ -1071,10 +1071,7 @@
         },
         "runtime": {
           "bin/placeholder/Vdlcrm.Services.dll": {}
-        },
-        "frameworkReferences": [
-          "Microsoft.AspNetCore.App"
-        ]
+        }
       },
       "Vdlcrm.Utilities/1.0.0": {
         "type": "project",

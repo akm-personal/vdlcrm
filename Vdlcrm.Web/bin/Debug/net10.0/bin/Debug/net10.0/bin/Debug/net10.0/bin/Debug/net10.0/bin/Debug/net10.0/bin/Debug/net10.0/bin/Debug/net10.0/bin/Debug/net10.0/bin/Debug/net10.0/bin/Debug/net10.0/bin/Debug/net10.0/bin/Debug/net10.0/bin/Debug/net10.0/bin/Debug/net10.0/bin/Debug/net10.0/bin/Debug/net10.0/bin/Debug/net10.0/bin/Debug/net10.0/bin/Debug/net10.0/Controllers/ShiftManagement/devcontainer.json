@@ -1,0 +1,10 @@
+{
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "API",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    }
+  }
+}
