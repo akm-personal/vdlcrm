@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vdlcrm.Services;
 
@@ -10,9 +11,11 @@ using Vdlcrm.Services;
 namespace Vdlcrm.Services.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260502145125_AddFeeTables")]
+    partial class AddFeeTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
@@ -171,7 +174,10 @@ namespace Vdlcrm.Services.Migrations
 
                     b.HasIndex("UpdatedBy");
 
-                    b.ToTable("shifts", (string)null);
+                    b.ToTable("shifts", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("Vdlcrm.Model.Student", b =>

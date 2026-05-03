@@ -106,6 +106,22 @@ public class StudentService
     }
 
     /// <summary>
+    /// Get a student by VDL ID
+    /// </summary>
+    /// <param name="vdlId">Student VDL ID</param>
+    /// <returns>Student object if found, null otherwise</returns>
+    public async Task<Student?> GetStudentByVdlIdAsync(string vdlId)
+    {
+        if (string.IsNullOrWhiteSpace(vdlId))
+        {
+            throw new ArgumentException("VDL ID cannot be empty.", nameof(vdlId));
+        }
+
+        var students = await _studentRepository.GetAllAsync();
+        return students.FirstOrDefault(s => string.Equals(s.VdlId, vdlId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Update an existing student's details
     /// </summary>
     /// <param name="student">Student object with updated details</param>
@@ -143,6 +159,22 @@ public class StudentService
         }
 
         return await _studentRepository.DeleteAsync(id);
+    }
+
+    /// <summary>
+    /// Delete a student by VDL ID
+    /// </summary>
+    /// <param name="vdlId">Student VDL ID to delete</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
+    public async Task<bool> DeleteStudentByVdlIdAsync(string vdlId)
+    {
+        var student = await GetStudentByVdlIdAsync(vdlId);
+        if (student == null)
+        {
+            return false;
+        }
+
+        return await _studentRepository.DeleteAsync(student.Id);
     }
 
     /// <summary>

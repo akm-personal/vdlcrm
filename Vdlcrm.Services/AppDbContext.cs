@@ -13,6 +13,9 @@ public class AppDbContext : DbContext
     public DbSet<Student> StudentDetails { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<FeeRecord> FeeRecords { get; set; }
+    public DbSet<FeePayment> FeePayments { get; set; }
+    public DbSet<Shift> Shifts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,6 +84,76 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RoleId)
                 .HasPrincipalKey(r => r.RoleId);
+        });
+
+        // Configure Shift entity with table name
+        modelBuilder.Entity<Shift>(entity =>
+        {
+            entity.ToTable("shifts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ShiftName).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.ShiftName).IsUnique();
+            entity.Property(e => e.Status).IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.StartTime).HasMaxLength(20);
+            entity.Property(e => e.EndTime).HasMaxLength(20);
+            entity.Property(e => e.CreatedBy).IsRequired();
+            entity.Property(e => e.UpdatedBy).IsRequired(false);
+            entity.Property(e => e.CreatedDate).IsRequired();
+            entity.Property(e => e.UpdatedDate).IsRequired();
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            // Foreign key relationships
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure FeeRecord entity
+        modelBuilder.Entity<FeeRecord>(entity =>
+        {
+            entity.ToTable("fee_records");
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.TotalFee).HasColumnType("decimal(10,2)").IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>().IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Description).IsRequired(false);
+            
+            entity.HasOne(e => e.Student)
+                .WithMany()
+                .HasForeignKey(e => e.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure FeePayment entity
+        modelBuilder.Entity<FeePayment>(entity =>
+        {
+            entity.ToTable("fee_payments");
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.AmountPaid).HasColumnType("decimal(10,2)").IsRequired();
+            entity.Property(e => e.PaymentMode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Note).IsRequired(false);
+            
+            entity.HasOne(e => e.FeeRecord)
+                .WithMany(f => f.FeePayments)
+                .HasForeignKey(e => e.FeeRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.CollectedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CollectedBy)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
