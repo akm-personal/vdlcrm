@@ -37,7 +37,7 @@ public class AuthService
                 return new LoginResponse
                 {
                     Success = false,
-                    Message = "Invalid credentials or user is inactive"
+                    Message = "Invalid credentials or user is not active"
                 };
             }
 

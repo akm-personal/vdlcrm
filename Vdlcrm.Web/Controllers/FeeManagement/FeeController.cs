@@ -55,14 +55,7 @@ public class FeeController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var record = await _feeService.CreateFeeRecordAsync(
-                request.StudentId, 
-                request.TotalFee, 
-                request.StartDate, 
-                request.EndDate, 
-                request.Description, 
-                userId
-            );
+            var record = await _feeService.CreateFeeRecordAsync(request, userId);
 
             return CreatedAtAction(nameof(GetStudentFeeRecords), new { studentId = request.StudentId }, record);
         }

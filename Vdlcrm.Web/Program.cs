@@ -289,7 +289,17 @@ string GetDatabaseBrowserHtml()
                 </div>
                 
                 <div id='data' class='tab-content active'>
-                    <div id='dataContent'>Select a table to view data</div>
+                    <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee;'>
+                        <strong id='currentTableName' style='color: #667eea; font-size: 16px;'>No table selected</strong>
+                        <div style='display:flex; align-items:center; gap: 15px;'>
+                            <label style='display:flex; align-items:center; gap: 5px; cursor:pointer; font-size: 14px; color: #555;'>
+                                <input type='checkbox' id='autoRefreshToggle' onchange='handleAutoRefreshChange()'> 
+                                <span style='position:relative; top:1px;'>🔴 Live Auto-Refresh (3s)</span>
+                            </label>
+                            <button class='btn-small' onclick='loadTableData()' style='margin:0; background:#e2e8f0; color:#333;'>🔄 Refresh Now</button>
+                        </div>
+                    </div>
+                    <div id='dataContent'>Select a table from the sidebar to view data</div>
                 </div>
                 
                 <div id='schema' class='tab-content'>
@@ -309,6 +319,27 @@ string GetDatabaseBrowserHtml()
     <script>
         let currentTable = null;
         let authToken = localStorage.getItem('vdlcrm_db_token');
+        let refreshIntervalId = null;
+        let isSilentlyRefreshing = false;
+
+        function handleAutoRefreshChange() {
+            const isChecked = document.getElementById('autoRefreshToggle').checked;
+            if (isChecked) {
+                if (currentTable) {
+                    isSilentlyRefreshing = true;
+                    loadTableData().finally(() => isSilentlyRefreshing = false);
+                }
+                refreshIntervalId = setInterval(() => {
+                    if (currentTable && document.getElementById('data').classList.contains('active')) {
+                        isSilentlyRefreshing = true;
+                        loadTableData().finally(() => isSilentlyRefreshing = false);
+                    }
+                }, 3000);
+            } else {
+                if (refreshIntervalId) clearInterval(refreshIntervalId);
+                refreshIntervalId = null;
+            }
+        }
 
         function checkAuth() {
             if (authToken) {
@@ -386,9 +417,11 @@ string GetDatabaseBrowserHtml()
 
         async function selectTable(tableName, element) {
             currentTable = tableName;
+            document.getElementById('currentTableName').textContent = 'Table: ' + tableName;
             document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             
+            isSilentlyRefreshing = false;
             await loadTableData();
             await loadTableSchema();
         }
@@ -397,7 +430,9 @@ string GetDatabaseBrowserHtml()
             if (!currentTable) return;
             
             const dataContent = document.getElementById('dataContent');
-            dataContent.innerHTML = 'Loading...';
+            if (!isSilentlyRefreshing) {
+                dataContent.innerHTML = '<div style=""padding: 20px; text-align: center; color: #666;"">⏳ Loading data...</div>';
+            }
             
             try {
                 let pkCol = null;
@@ -453,7 +488,9 @@ string GetDatabaseBrowserHtml()
                 });
                 
                 html += '</tbody></table></div>';
-                dataContent.innerHTML = html;
+                if (dataContent.innerHTML !== html) {
+                    dataContent.innerHTML = html;
+                }
             } catch (error) {
                 dataContent.innerHTML = '<div class=""error"">Error: ' + error.message + '</div>';
             }

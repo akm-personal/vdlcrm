@@ -4,11 +4,14 @@ namespace Vdlcrm.Model.DTOs;
 
 public class CreateFeeRecordRequest
 {
-    public int StudentId { get; set; }
-    public decimal TotalFee { get; set; }
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public string Description { get; set; } = string.Empty;
+  public int StudentId { get; set; }
+        public decimal TotalFee { get; set; }
+        public decimal CollectedFee { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string? Description { get; set; }
+        public string PaymentMode { get; set; } = "Cash";
+        public string? PaymentNote { get; set; }
 }
 
 public class AddFeePaymentRequest

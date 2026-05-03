@@ -36,7 +36,7 @@ RoleSequenceId | RoleName         | RoleId
 | **Email** | VARCHAR(100) | NOT NULL, UNIQUE | User email address |
 | **PasswordHash** | TEXT | NOT NULL | BCrypt hashed password |
 | **RoleId** | INT | NOT NULL, FK → roles(RoleId) | User's role (1-4) |
-| **IsActive** | BOOLEAN | NOT NULL | Active/inactive user flag |
+| **IsActive** | BOOLEAN | NOT NULL | Active/Not Active user flag |
 | **CreatedDate** | DATETIME | NOT NULL | Account creation timestamp |
 | **UpdatedDate** | DATETIME | NOT NULL | Last profile update timestamp |
 
@@ -74,7 +74,7 @@ Id | Username | Email              | PasswordHash    | RoleId | IsActive | Creat
 | **IdProof** | VARCHAR(100) | NOT NULL | ID proof type |
 | **ShiftType** | VARCHAR(50) | NOT NULL | Morning/Afternoon |
 | **SeatNumber** | INT | NOT NULL | Assigned seat number |
-| **StudentStatus** | VARCHAR(50) | NOT NULL | Active/Inactive |
+| **StudentStatus** | VARCHAR(50) | NOT NULL | Active/Not Active |
 | **CreatedDate** | DATETIME | NOT NULL | Registration date |
 | **UpdatedDate** | DATETIME | NOT NULL | Last update date |
 

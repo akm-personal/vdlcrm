@@ -274,7 +274,7 @@ public class ShiftsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all shifts including inactive and deleted (Admin and Internal User only)
+    /// Get all shifts including Not Active and deleted (Admin and Internal User only)
     /// </summary>
     /// <returns>List of all shifts</returns>
     [HttpGet("all")]

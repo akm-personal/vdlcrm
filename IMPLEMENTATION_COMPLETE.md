@@ -37,7 +37,7 @@ CREATE TABLE users (
 ```
 - Secure password storage using BCrypt
 - Role assignment for each user
-- Active/inactive user status
+- Active/Not Active user status
 
 ---
 

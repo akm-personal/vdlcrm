@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<FeeRecord> FeeRecords { get; set; }
     public DbSet<FeePayment> FeePayments { get; set; }
     public DbSet<Shift> Shifts { get; set; }
+    public DbSet<AppStatus> Statuses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -154,6 +155,35 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.CollectedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure Status entity
+        modelBuilder.Entity<AppStatus>(entity =>
+        {
+            entity.ToTable("statuses");
+            entity.HasKey(e => e.StatusId);
+            entity.Property(e => e.StatusType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.StatusName).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => new { e.StatusType, e.StatusName }).IsUnique();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+
+            // Seed default statuses into the database
+            entity.HasData(
+                // Fee Statuses
+                new AppStatus { StatusId = 1, StatusType = "Fee", StatusName = "Pending", IsActive = true },
+                new AppStatus { StatusId = 2, StatusType = "Fee", StatusName = "Partial", IsActive = true },
+                new AppStatus { StatusId = 3, StatusType = "Fee", StatusName = "Paid", IsActive = true },
+                
+                // General Statuses (For Shift, User, etc.)
+                new AppStatus { StatusId = 4, StatusType = "General", StatusName = "Active", IsActive = true },
+                new AppStatus { StatusId = 5, StatusType = "General", StatusName = "Not Active", IsActive = true },
+
+                // Student Statuses
+                new AppStatus { StatusId = 6, StatusType = "Student", StatusName = "Active", IsActive = true },
+                new AppStatus { StatusId = 7, StatusType = "Student", StatusName = "Not Active", IsActive = true },
+                new AppStatus { StatusId = 8, StatusType = "Student", StatusName = "Dropped", IsActive = true },
+                new AppStatus { StatusId = 9, StatusType = "Student", StatusName = "Cancelled", IsActive = true }
+            );
         });
     }
 }
