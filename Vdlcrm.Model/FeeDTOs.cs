@@ -4,7 +4,7 @@ namespace Vdlcrm.Model.DTOs;
 
 public class CreateFeeRecordRequest
 {
-  public int StudentId { get; set; }
+        public string VdlId { get; set; } = string.Empty;
         public decimal TotalFee { get; set; }
         public decimal CollectedFee { get; set; }
         public DateTime StartDate { get; set; }
@@ -24,7 +24,7 @@ public class AddFeePaymentRequest
 
 public class FeeBalanceResponse
 {
-    public int StudentId { get; set; }
+    public string VdlId { get; set; } = string.Empty;
     public decimal TotalFee { get; set; }
     public decimal TotalPaid { get; set; }
     public decimal Balance { get; set; }

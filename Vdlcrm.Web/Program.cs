@@ -17,12 +17,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 // NSwag Swagger generator for interactive UI at /swagger
+
+// 1. Admin & Internal User API Document (All APIs)
 builder.Services.AddSwaggerDocument(config =>
 {
+    config.DocumentName = "admin";
     config.PostProcess = document =>
     {
-        document.Info.Title = "VDLCRM API";
-        document.Info.Description = "API for VDLCRM Application.";
+        document.Info.Title = "VDLCRM API - Admin & Internal User";
+        document.Info.Description = "Full API access for Admin and Internal Users (Role 1, 2).";
+            ApplySwaggerExamples(document);
     };
     config.AddSecurity("Bearer", Enumerable.Empty<string>(), new OpenApiSecurityScheme
     {
@@ -32,6 +36,48 @@ builder.Services.AddSwaggerDocument(config =>
         TokenUrl = "/api/auth/swagger-login"
     });
     config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
+});
+
+// 2. External User API Document
+builder.Services.AddSwaggerDocument(config =>
+{
+    config.DocumentName = "external";
+    config.PostProcess = document =>
+    {
+        document.Info.Title = "VDLCRM API - External User";
+        document.Info.Description = "Limited API access for External Users (Role 3).";
+            ApplySwaggerExamples(document);
+    };
+    config.AddSecurity("Bearer", Enumerable.Empty<string>(), new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.OAuth2,
+        Description = "Enter your Username and Password to automatically generate and use the JWT token.",
+        Flow = OpenApiOAuth2Flow.Password,
+        TokenUrl = "/api/auth/swagger-login"
+    });
+    config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
+    config.OperationProcessors.Add(new Vdlcrm.Web.Swagger.RoleBasedOperationProcessor("External User"));
+});
+
+// 3. Student API Document
+builder.Services.AddSwaggerDocument(config =>
+{
+    config.DocumentName = "student";
+    config.PostProcess = document =>
+    {
+        document.Info.Title = "VDLCRM API - Student";
+        document.Info.Description = "Limited API access for Students (Role 4).";
+            ApplySwaggerExamples(document);
+    };
+    config.AddSecurity("Bearer", Enumerable.Empty<string>(), new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.OAuth2,
+        Description = "Enter your Username and Password to automatically generate and use the JWT token.",
+        Flow = OpenApiOAuth2Flow.Password,
+        TokenUrl = "/api/auth/swagger-login"
+    });
+    config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
+    config.OperationProcessors.Add(new Vdlcrm.Web.Swagger.RoleBasedOperationProcessor("Student"));
 });
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
@@ -58,8 +104,9 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RegistrationService>();  // Add RegistrationService for bulk student registration
 builder.Services.AddScoped<PasswordUpdateService>();  // Add PasswordUpdateService for password updates
 builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift management
+builder.Services.AddScoped<SeatManagementService>();  // Add SeatManagementService for seat and row management
 builder.Services.AddScoped<FeeService>();  // Add FeeService for fee management
-builder.Services.AddScoped<ErrorLoggingService>();
+builder.Services.AddSingleton<ErrorLoggingService>(); // Middleware me use hone ki wajah se ise Singleton banana zaroori hai
 builder.Services.AddHttpContextAccessor(); 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -106,6 +153,12 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Add API Logging Middleware (Authorization ke baad aana chahiye taaki User ID mil sake)
+app.UseMiddleware<ApiLoggingMiddleware>();
+
+// Add Dynamic Permission Middleware
+app.UseMiddleware<DynamicPermissionMiddleware>();
 
 // Map root endpoint
 app.MapGet("/", () => new { message = "Vdlcrm API is running", version = "1.0" });
@@ -249,6 +302,7 @@ string GetDatabaseBrowserHtml()
         button:hover { background: #764ba2; }
 
         .btn-small { padding: 5px 10px; margin-top: 0; font-size: 12px; }
+        .btn-success { background: #28a745; }
         .btn-danger { background: #dc3545; }
         .btn-danger:hover { background: #c82333; }
         .error { color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 4px; margin: 10px 0; }
@@ -261,7 +315,10 @@ string GetDatabaseBrowserHtml()
     <div class='container'>
         <div style='display:flex; justify-content:space-between; align-items:center;'>
             <h1>Database Browser - VDLCRM</h1>
-            <button id='logoutBtn' style='display:none;' onclick='logout()' class='btn-small btn-danger'>Logout Admin</button>
+            <div style='display:flex; gap:10px; align-items:center;'>
+                <button id='refreshDbBtn' style='display:none;' onclick='refreshEntireDatabase()' class='btn-small btn-success' title='Refresh tables, schema, and data'>🔄 Refresh DB</button>
+                <button id='logoutBtn' style='display:none;' onclick='logout()' class='btn-small btn-danger'>Logout Admin</button>
+            </div>
         </div>
 
         <div id='authSection' class='auth-container'>
@@ -290,7 +347,24 @@ string GetDatabaseBrowserHtml()
                 
                 <div id='data' class='tab-content active'>
                     <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee;'>
-                        <strong id='currentTableName' style='color: #667eea; font-size: 16px;'>No table selected</strong>
+                        <div style='display:flex; align-items:center; flex-wrap:wrap; gap: 15px;'>
+                            <strong id='currentTableName' style='color: #667eea; font-size: 16px;'>No table selected</strong>
+                            <div id='paginationControls' style='display:none; align-items:center; gap: 10px; font-size: 14px; padding-left: 15px; border-left: 1px solid #ddd;'>
+                                <label>Rows: 
+                                    <select id='pageSizeSelect' onchange='handlePageSizeChange()' style='padding: 3px; border-radius: 4px; border: 1px solid #ccc;'>
+                                        <option value='10'>10</option>
+                                        <option value='50' selected>50</option>
+                                        <option value='100'>100</option>
+                                        <option value='500'>500</option>
+                                        <option value='1000'>1000</option>
+                                        <option value='All'>All</option>
+                                    </select>
+                                </label>
+                                <span id='pageInfo'>Page 1 of 1</span>
+                                <button class='btn-small' onclick='prevPage()' id='prevBtn' disabled style='margin:0; padding:2px 8px;'>◀</button>
+                                <button class='btn-small' onclick='nextPage()' id='nextBtn' disabled style='margin:0; padding:2px 8px;'>▶</button>
+                            </div>
+                        </div>
                         <div style='display:flex; align-items:center; gap: 15px;'>
                             <label style='display:flex; align-items:center; gap: 5px; cursor:pointer; font-size: 14px; color: #555;'>
                                 <input type='checkbox' id='autoRefreshToggle' onchange='handleAutoRefreshChange()'> 
@@ -321,6 +395,13 @@ string GetDatabaseBrowserHtml()
         let authToken = localStorage.getItem('vdlcrm_db_token');
         let refreshIntervalId = null;
         let isSilentlyRefreshing = false;
+        
+        // Pagination state
+        let currentTableData = [];
+        let currentTableColumns = [];
+        let currentPkCol = null;
+        let currentPage = 1;
+        let pageSize = '50';
 
         function handleAutoRefreshChange() {
             const isChecked = document.getElementById('autoRefreshToggle').checked;
@@ -346,11 +427,13 @@ string GetDatabaseBrowserHtml()
                 document.getElementById('authSection').style.display = 'none';
                 document.getElementById('mainLayout').style.display = 'grid';
                 document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('refreshDbBtn').style.display = 'block';
                 loadTables();
             } else {
                 document.getElementById('authSection').style.display = 'block';
                 document.getElementById('mainLayout').style.display = 'none';
                 document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('refreshDbBtn').style.display = 'none';
             }
         }
 
@@ -386,6 +469,23 @@ string GetDatabaseBrowserHtml()
             authToken = null;
             localStorage.removeItem('vdlcrm_db_token');
             checkAuth();
+        }
+
+        async function refreshEntireDatabase() {
+            const btn = document.getElementById('refreshDbBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Refreshing...';
+            btn.disabled = true;
+            try {
+                await loadTables();
+                if (currentTable) {
+                    await loadTableData();
+                    await loadTableSchema();
+                }
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         async function loadTables() {
@@ -451,48 +551,119 @@ string GetDatabaseBrowserHtml()
                 if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
                 const data = JSON.parse(responseText);
                 
-                if (data.rows.length === 0) {
-                    dataContent.innerHTML = `
-                        <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
-                            <p>No records found</p>
-                            <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
-                        </div>`;
-                    return;
+                currentTableData = data.rows || [];
+                currentTableColumns = data.columns || [];
+                currentPkCol = pkCol;
+                
+                if (!isSilentlyRefreshing) {
+                    currentPage = 1;
                 }
                 
-                let html = `
-                    <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
-                        <p>Total: ${data.rowCount} records</p>
-                        <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
-                    </div>`;
-                html += '<div class=""table-responsive""><table><thead><tr>';
-                data.columns.forEach(col => html += '<th>' + col + '</th>');
-                if (pkCol) html += '<th>Actions</th>';
-                html += '</tr></thead><tbody>';
-                
-                data.rows.forEach(row => {
-                    html += '<tr>';
-                    data.columns.forEach(col => {
-                        const val = row[col];
-                        html += '<td>' + (val === null ? 'NULL' : val) + '</td>';
-                    });
-                    if (pkCol) {
-                        const pkVal = row[pkCol];
-                        const rowJsonStr = encodeURIComponent(JSON.stringify(row));
-                        html += `<td>
-                            <button class=""btn-small"" onclick=""editRow('${pkCol}', '${pkVal}', '${rowJsonStr}')"">Edit</button>
-                            <button class=""btn-small btn-danger"" onclick=""deleteRow('${pkCol}', '${pkVal}')"">Delete</button>
-                        </td>`;
-                    }
-                    html += '</tr>';
-                });
-                
-                html += '</tbody></table></div>';
-                if (dataContent.innerHTML !== html) {
-                    dataContent.innerHTML = html;
+                const paginationControls = document.getElementById('paginationControls');
+                if (paginationControls) {
+                    paginationControls.style.display = currentTableData.length > 0 ? 'flex' : 'none';
                 }
+                
+                renderTableData();
             } catch (error) {
                 dataContent.innerHTML = '<div class=""error"">Error: ' + error.message + '</div>';
+            }
+        }
+
+        function renderTableData() {
+            const dataContent = document.getElementById('dataContent');
+            
+            if (!currentTableData || currentTableData.length === 0) {
+                dataContent.innerHTML = `
+                    <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
+                        <p>No records found</p>
+                        <div>
+                            <button class=""btn-small btn-success"" onclick=""generateInsertStatement('${currentTable}')"">➕ New Insert</button>
+                            <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            let displayData = currentTableData;
+            let totalPages = 1;
+
+            if (pageSize !== 'All') {
+                const size = parseInt(pageSize);
+                totalPages = Math.ceil(currentTableData.length / size) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+                
+                const startIdx = (currentPage - 1) * size;
+                const endIdx = startIdx + size;
+                displayData = currentTableData.slice(startIdx, endIdx);
+                
+                document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages} (Total: ${currentTableData.length})`;
+                document.getElementById('prevBtn').disabled = currentPage === 1;
+                document.getElementById('nextBtn').disabled = currentPage === totalPages;
+            } else {
+                document.getElementById('pageInfo').textContent = `All ${currentTableData.length} records`;
+                document.getElementById('prevBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true;
+            }
+            
+            let html = `
+                <div style=""display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"">
+                    <p>Showing ${displayData.length} of ${currentTableData.length} records</p>
+                    <div>
+                        <button class=""btn-small btn-success"" onclick=""generateInsertStatement('${currentTable}')"">➕ New Insert</button>
+                        <button class=""btn-danger btn-small"" onclick=""truncateTable('${currentTable}')"">⚠️ Truncate & Reset ID</button>
+                    </div>
+                </div>`;
+            
+            html += '<div class=""table-responsive""><table><thead><tr>';
+            currentTableColumns.forEach(col => html += '<th>' + col + '</th>');
+            if (currentPkCol) html += '<th>Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            displayData.forEach(row => {
+                html += '<tr>';
+                currentTableColumns.forEach(col => {
+                    const val = row[col];
+                    html += '<td>' + (val === null ? 'NULL' : val) + '</td>';
+                });
+                if (currentPkCol) {
+                    const pkVal = row[currentPkCol];
+                    const rowJsonStr = encodeURIComponent(JSON.stringify(row));
+                    html += `<td>
+                        <button class=""btn-small"" onclick=""editRow('${currentPkCol}', '${pkVal}', '${rowJsonStr}')"">Edit</button>
+                        <button class=""btn-small btn-danger"" onclick=""deleteRow('${currentPkCol}', '${pkVal}')"">Delete</button>
+                    </td>`;
+                }
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            
+            if (dataContent.innerHTML !== html) {
+                dataContent.innerHTML = html;
+            }
+        }
+
+        function handlePageSizeChange() {
+            pageSize = document.getElementById('pageSizeSelect').value;
+            currentPage = 1;
+            renderTableData();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTableData();
+            }
+        }
+
+        function nextPage() {
+            if (pageSize === 'All') return;
+            const size = parseInt(pageSize);
+            const totalPages = Math.ceil(currentTableData.length / size);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTableData();
             }
         }
 
@@ -629,6 +800,49 @@ string GetDatabaseBrowserHtml()
                     if(data.success) { alert(data.message); loadTableData(); }
                     else alert('Error: ' + data.error);
                 } catch(e) { alert('Error: ' + e.message); }
+            }
+
+            async function generateInsertStatement(tableName) {
+                if (!tableName) return;
+
+                try {
+                    const schemaResponse = await fetch('/api/databasebrowser/schema/' + tableName, { headers: { 'Authorization': 'Bearer ' + authToken } });
+                    if (!schemaResponse.ok) {
+                        throw new Error('Could not fetch table schema.');
+                    }
+                    const schemaData = await schemaResponse.json();
+                    
+                    const columns = [];
+                    const values = [];
+                    
+                    schemaData.columns.forEach(col => {
+                        // Skip auto-incrementing primary keys
+                        if (col.pk && col.type.toLowerCase().includes('int')) {
+                            return;
+                        }
+                        
+                        columns.push(`[${col.name}]`);
+                        
+                        // Generate dummy data based on type and name
+                        const colNameLower = col.name.toLowerCase();
+                        const colTypeLower = col.type.toLowerCase();
+
+                        if (colNameLower.includes('email')) values.push(`'test${Date.now()}@example.com'`);
+                        else if (colNameLower.includes('name')) values.push(`'Dummy Name'`);
+                        else if (colNameLower.includes('date')) values.push(`'${new Date().toISOString()}'`);
+                        else if (colNameLower.includes('isdeleted') || colNameLower.includes('isactive')) values.push(colNameLower.includes('isactive') ? '1' : '0');
+                        else if (colTypeLower.includes('int')) values.push('1');
+                        else if (colTypeLower.includes('decimal') || colTypeLower.includes('real') || colTypeLower.includes('double')) values.push('10.99');
+                        else if (colTypeLower.includes('text') || colTypeLower.includes('char')) values.push(`'Sample Data'`);
+                        else if (colTypeLower.includes('bool')) values.push('1');
+                        else values.push('NULL');
+                    });
+
+                    const query = `INSERT INTO [${tableName}] (${columns.join(', ')})\nVALUES (${values.join(', ')});`;
+                    document.getElementById('queryInput').value = query;
+                    switchTab('query');
+                    document.getElementById('queryInput').scrollIntoView({ behavior: 'smooth' });
+                } catch (e) { alert('Error generating INSERT statement: ' + e.message); }
             }
 
         checkAuth();
@@ -826,28 +1040,75 @@ string GetApiDocsHtml()
                     
                     <div class='endpoint'>
                         <span class='method GET'>GET</span> Get All Students
-                        <div class='endpoint-url'>/api/StudentList</div>
+                        <div class='endpoint-url'>/api/student/list</div>
                         <div class='endpoint-desc'>Get all registered students (Admin/Internal only)</div>
                         <div class='test-form'>
-                            <button class='test' onclick='testEndpoint(""GET"", ""/api/StudentList"", null, ""studentsResult"")'>Test Get Students</button>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/student/list"", null, ""studentsResult"")'>Test Get Students</button>
                             <div id='studentsResult' class='response'></div>
                         </div>
                     </div>
                     
                     <div class='endpoint'>
                         <span class='method GET'>GET</span> Get Student by VDL ID
-                        <div class='endpoint-url'>/api/student/{vdlId}</div>
+                        <div class='endpoint-url'>/api/student/details/{vdlId}</div>
                         <div class='endpoint-desc'>Get specific student details by VDL ID</div>
                         <div class='test-form'>
                             <div class='form-group'>
                                 <label>Student VDL ID:</label>
-                                <input type='text' id='studentId' placeholder='Enter VDL ID (e.g., VDL001)' />
+                                <input type='text' id='studentDetailsId' placeholder='Enter VDL ID (e.g., VDL001)' />
                             </div>
-                            <button class='test' onclick='testEndpoint(""GET"", ""/api/student/"" + document.getElementById(""studentId"").value, null, ""studentResult"")'>Test Get Student</button>
+                            <button class='test' onclick='testEndpoint(""GET"", ""/api/student/details/"" + document.getElementById(""studentDetailsId"").value, null, ""studentResult"")'>Test Get Student</button>
                             <div id='studentResult' class='response'></div>
                         </div>
                     </div>
                     
+                    <div class='endpoint'>
+                        <span class='method PUT'>PUT</span> Update Student by VDL ID
+                        <div class='endpoint-url'>/api/student/update/{vdlId}</div>
+                        <div class='endpoint-desc'>Update student details by VDL ID (Admin only)</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Student VDL ID:</label>
+                                <input type='text' id='studentUpdateId' placeholder='Enter VDL ID (e.g., VDL001)' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Request Body (JSON):</label>
+                                <textarea id='studentUpdateBody' placeholder='Enter JSON...'>{
+  ""vdlId"": ""VDL001"",
+  ""name"": ""Rahul Kumar Updated"",
+  ""email"": ""rahul.updated@example.com"",
+  ""fatherName"": ""Rajesh Kumar"",
+  ""gender"": ""Male"",
+  ""seatNumber"": 15,
+  ""shiftType"": ""Evening"",
+  ""address"": ""456 New Street, City"",
+  ""alternateNumber"": ""9876543211"",
+  ""class"": ""11th"",
+  ""dateOfBirth"": ""2005-08-15"",
+  ""idProof"": ""Aadhar Card"",
+  ""mobileNumber"": ""9876543210"",
+  ""studentStatus"": ""Active""
+}</textarea>
+                            </div>
+                            <button class='test' onclick='testEndpoint(""PUT"", ""/api/student/update/"" + document.getElementById(""studentUpdateId"").value, document.getElementById(""studentUpdateBody"").value, ""studentUpdateResult"")'>Test Update Student</button>
+                            <div id='studentUpdateResult' class='response'></div>
+                        </div>
+                    </div>
+                    
+                    <div class='endpoint'>
+                        <span class='method DELETE'>DELETE</span> Delete Student by VDL ID
+                        <div class='endpoint-url'>/api/student/delete/{vdlId}</div>
+                        <div class='endpoint-desc'>Delete a student by VDL ID (Admin only)</div>
+                        <div class='test-form'>
+                            <div class='form-group'>
+                                <label>Student VDL ID:</label>
+                                <input type='text' id='studentDeleteId' placeholder='Enter VDL ID (e.g., VDL001)' />
+                            </div>
+                            <button class='test' onclick='testEndpoint(""DELETE"", ""/api/student/delete/"" + document.getElementById(""studentDeleteId"").value, null, ""studentDeleteResult"")'>Test Delete Student</button>
+                            <div id='studentDeleteResult' class='response'></div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -949,6 +1210,142 @@ string GetApiDocsHtml()
     </script>
 </body>
 </html>";
+}
+
+void ApplySwaggerExamples(NSwag.OpenApiDocument document)
+{
+    // Adding Examples directly to the Request body definitions.
+    // This will show up right below the Request parameters box in Swagger UI.
+    
+    if (document.Definitions.TryGetValue("LoginRequest", out var loginReq))
+    {
+        loginReq.Example = new
+        {
+            username = "vdl001",
+            password = "pws@123"
+        };
+    }
+
+    if (document.Definitions.TryGetValue("RegisterRequest", out var registerReq))
+    {
+        registerReq.Example = new
+        {
+            username = "VDL001",
+            email = "example@gmail.com",
+            mobileNumber = "7894561230",
+            password = "temp001",
+            roleId = 1
+        };
+    }
+
+    if (document.Definitions.TryGetValue("StudentRegisterRequest", out var studentReg))
+    {
+        studentReg.Example = new
+        {
+            name = "Rahul Kumar",
+            email = "rahul.k@example.com",
+            fatherName = "Rajesh Kumar",
+            gender = "Male",
+            seatNumber = 12,
+            shiftType = "Morning",
+            address = "123 Main Street, City",
+            alternateNumber = "9876543212",
+            @class = "10th",
+            dateOfBirth = "2005-08-15",
+            idProof = "Aadhar Card",
+            mobileNumber = "9876543210",
+            studentStatus = "Active"
+        };
+    }
+
+    if (document.Definitions.TryGetValue("CreateShiftRequest", out var createShiftReq))
+    {
+        createShiftReq.Example = new
+        {
+            shiftName = "Morning Shift",
+            startTime = "08:00 AM",
+            endTime = "02:00 PM",
+            status = 1
+        };
+    }
+
+    if (document.Definitions.TryGetValue("UpdatePasswordRequest", out var updatePassReq))
+    {
+        updatePassReq.Example = new
+        {
+            userId = 1,
+            tempPassword = "TempPassword123!",
+            newPassword = "NewPassword123!@#"
+        };
+    }
+
+    if (document.Definitions.TryGetValue("StudentUpdateRequest", out var studentUpdReq))
+    {
+        studentUpdReq.Example = new
+        {
+            vdlId = "VDL001",
+            name = "Rahul Kumar Updated",
+            email = "rahul.k.updated@example.com",
+            fatherName = "Rajesh Kumar",
+            gender = "Male",
+            seatNumber = 15,
+            shiftType = "Evening",
+            address = "456 New Street, City",
+            alternateNumber = "9876543212",
+            @class = "11th",
+            dateOfBirth = "2005-08-15",
+            idProof = "Aadhar Card",
+            mobileNumber = "9876543210",
+            studentStatus = "Active"
+        };
+    }
+
+    if (document.Definitions.TryGetValue("UpdateShiftRequest", out var updateShiftReq))
+    {
+        updateShiftReq.Example = new
+        {
+            shiftName = "Evening Shift",
+            startTime = "02:00 PM",
+            endTime = "08:00 PM",
+            status = 1
+        };
+    }
+
+    if (document.Definitions.TryGetValue("EndpointPermissionRequest", out var endpointPermReq))
+    {
+        endpointPermReq.Example = new
+        {
+            routeUrl = "api/Student/list",
+            httpMethod = "GET",
+            roleIds = new[] { 1, 2 }
+        };
+    }
+
+    if (document.Definitions.TryGetValue("CreateFeeRecordRequest", out var createFeeReq))
+    {
+        createFeeReq.Example = new
+        {
+            vdlId = "VDL001",
+            totalFee = 50000,
+            collectedFee = 15000,
+            startDate = "2024-04-01",
+            endDate = "2025-03-31",
+            paymentMode = "UPI",
+            description = "Class 10th Annual Fee",
+            paymentNote = "First Installment"
+        };
+    }
+
+    if (document.Definitions.TryGetValue("FeePaymentRequest", out var feePaymentReq))
+    {
+        feePaymentReq.Example = new
+        {
+            feeRecordId = 1,
+            amountPaid = 15000,
+            paymentMode = "UPI",
+            note = "Second Installment"
+        };
+    }
 }
 
 app.Run();

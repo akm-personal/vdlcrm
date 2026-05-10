@@ -87,7 +87,7 @@ public class AuthService
         }
     }
 
-    public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
+    public async Task<LoginResponse> RegisterAsync(RegisterRequest request, string createdBy = "self")
     {
         try
         {
@@ -134,6 +134,7 @@ public class AuthService
             var newStudent = new Student
             {
                 VdlId = generatedVdlId,
+                CreatedBy = createdBy,
                 Name = request.Username, // Frontend username is saved as Student Name
                 Email = request.Email,
                 MobileNumber = request.MobileNumber,
@@ -154,6 +155,7 @@ public class AuthService
                 PasswordHash = passwordHash,
                 RoleId = request.RoleId,
                 IsActive = true,
+                CreatedBy = createdBy,
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };

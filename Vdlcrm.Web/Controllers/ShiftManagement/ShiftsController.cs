@@ -23,16 +23,16 @@ public class ShiftsController : ControllerBase
     }
 
     /// <summary>
-    /// Get the current user's ID from JWT claims
+    /// Get the current user's VDL ID from JWT claims
     /// </summary>
-    private int GetCurrentUserId()
+    private string GetCurrentVdlId()
     {
         var claimsIdentity = User.Identity as ClaimsIdentity;
-        var userIdClaim = claimsIdentity?.FindFirst(ClaimTypes.NameIdentifier);
+        var usernameClaim = claimsIdentity?.FindFirst(ClaimTypes.Name);
         
-        if (int.TryParse(userIdClaim?.Value, out var userId))
+        if (!string.IsNullOrWhiteSpace(usernameClaim?.Value))
         {
-            return userId;
+            return usernameClaim.Value;
         }
 
         throw new UnauthorizedAccessException("User ID not found in token.");
@@ -85,7 +85,7 @@ public class ShiftsController : ControllerBase
         if (!IsUserAuthorized())
         {
             _logger.LogWarning($"Unauthorized shift creation attempt by user with valid token");
-            return Forbid("Only Admin and Internal User roles can create shifts.");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only Admin and Internal User roles can create shifts." });
         }
 
         if (request == null || string.IsNullOrWhiteSpace(request.ShiftName))
@@ -95,7 +95,7 @@ public class ShiftsController : ControllerBase
 
         try
         {
-            var userId = GetCurrentUserId();
+            var vdlId = GetCurrentVdlId();
             
             var shift = new Shift
             {
@@ -105,9 +105,9 @@ public class ShiftsController : ControllerBase
                 EndTime = request.EndTime
             };
 
-            var createdShift = await _shiftService.CreateShiftAsync(shift, userId);
+            var createdShift = await _shiftService.CreateShiftAsync(shift, vdlId);
 
-            _logger.LogInformation($"Shift created by user {userId}: {createdShift.ShiftName}");
+            _logger.LogInformation($"Shift created by user {vdlId}: {createdShift.ShiftName}");
 
             return CreatedAtAction(nameof(GetShiftById), new { id = createdShift.Id }, new CreateShiftResponse
             {
@@ -149,7 +149,7 @@ public class ShiftsController : ControllerBase
         if (!IsUserAuthorized())
         {
             _logger.LogWarning($"Unauthorized shift update attempt by user with valid token");
-            return Forbid("Only Admin and Internal User roles can update shifts.");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only Admin and Internal User roles can update shifts." });
         }
 
         if (id <= 0)
@@ -164,7 +164,7 @@ public class ShiftsController : ControllerBase
 
         try
         {
-            var userId = GetCurrentUserId();
+            var vdlId = GetCurrentVdlId();
 
             var shift = new Shift
             {
@@ -174,14 +174,14 @@ public class ShiftsController : ControllerBase
                 EndTime = request.EndTime
             };
 
-            var updatedShift = await _shiftService.UpdateShiftAsync(id, shift, userId);
+            var updatedShift = await _shiftService.UpdateShiftAsync(id, shift, vdlId);
 
             if (updatedShift == null)
             {
                 return NotFound(new { message = "Shift not found." });
             }
 
-            _logger.LogInformation($"Shift updated by user {userId}: {updatedShift.ShiftName}");
+            _logger.LogInformation($"Shift updated by user {vdlId}: {updatedShift.ShiftName}");
 
             return Ok(new UpdateShiftResponse
             {
@@ -227,7 +227,7 @@ public class ShiftsController : ControllerBase
         if (!IsUserAuthorized())
         {
             _logger.LogWarning($"Unauthorized shift deletion attempt by user with valid token");
-            return Forbid("Only Admin and Internal User roles can delete shifts.");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only Admin and Internal User roles can delete shifts." });
         }
 
         if (id <= 0)
@@ -237,16 +237,16 @@ public class ShiftsController : ControllerBase
 
         try
         {
-            var userId = GetCurrentUserId();
+            var vdlId = GetCurrentVdlId();
             
-            var deleted = await _shiftService.SoftDeleteShiftAsync(id, userId);
+            var deleted = await _shiftService.SoftDeleteShiftAsync(id, vdlId);
 
             if (!deleted)
             {
                 return NotFound(new { message = "Shift not found." });
             }
 
-            _logger.LogInformation($"Shift soft deleted by user {userId}: ID={id}");
+            _logger.LogInformation($"Shift soft deleted by user {vdlId}: ID={id}");
 
             return Ok(new DeleteShiftResponse
             {
@@ -283,10 +283,11 @@ public class ShiftsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<GetShiftsResponse>> GetAllShifts()
     {
-        if (!IsUserAuthorized())
+        var roleId = GetCurrentUserRoleId();
+        if (roleId != 1 && roleId != 2 && roleId != 4) // Allow Admin, Internal User, and Student
         {
             _logger.LogWarning($"Unauthorized shifts fetch attempt by user with valid token");
-            return Forbid("Only Admin and Internal User roles can view shifts.");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only Admin, Internal User, and Student roles can view shifts." });
         }
 
         try
@@ -320,10 +321,11 @@ public class ShiftsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<GetShiftByIdResponse>> GetShiftById(int id)
     {
-        if (!IsUserAuthorized())
+        var roleId = GetCurrentUserRoleId();
+        if (roleId != 1 && roleId != 2 && roleId != 4) // Allow Admin, Internal User, and Student
         {
             _logger.LogWarning($"Unauthorized shift fetch attempt by user with valid token");
-            return Forbid("Only Admin and Internal User roles can view shift details.");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only Admin, Internal User, and Student roles can view shift details." });
         }
 
         if (id <= 0)

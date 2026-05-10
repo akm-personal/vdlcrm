@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Vdlcrm.Model;
 
 public class Student
@@ -19,4 +21,26 @@ public class Student
     public string? StudentStatus { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime UpdatedDate { get; set; }
+    public string? CreatedBy { get; set; }
+
+    [NotMapped]
+    public string? LastFeeStatus { get; set; }
+
+    [NotMapped]
+    public DateTime? LastFeeStartDate { get; set; }
+
+    [NotMapped]
+    public DateTime? LastFeeEndDate { get; set; }
+
+    [NotMapped]
+    public int? LastFeeRecordId { get; set; }
+
+    [NotMapped]
+    public decimal? RemainingBalance { get; set; }
+
+    [NotMapped]
+    public int? RoleId { get; set; }
+
+    [NotMapped]
+    public string? RoleName { get; set; }
 }

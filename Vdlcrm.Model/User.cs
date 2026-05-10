@@ -11,6 +11,7 @@ public class User
     public bool IsActive { get; set; } = true;
     public DateTime CreatedDate { get; set; }
     public DateTime UpdatedDate { get; set; }
+    public string? CreatedBy { get; set; }
         public bool IsPasswordChangedFromTemp { get; set; } = false; // Tracks if temp password has been changed
 
     // Navigation property

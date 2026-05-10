@@ -16,11 +16,11 @@ public class ShiftService
         _context = context;
     }
 
-    public async Task<Shift> CreateShiftAsync(Shift shift, int userId)
+    public async Task<Shift> CreateShiftAsync(Shift shift, string vdlId)
     {
-        shift.CreatedBy = userId;
+        shift.CreatedBy = vdlId;
         shift.CreatedDate = DateTime.UtcNow;
-        shift.UpdatedBy = userId;
+        shift.UpdatedBy = vdlId;
         shift.UpdatedDate = DateTime.UtcNow;
         shift.IsDeleted = false;
         
@@ -29,7 +29,7 @@ public class ShiftService
         return shift;
     }
 
-    public async Task<Shift?> UpdateShiftAsync(int id, Shift updatedShift, int userId)
+    public async Task<Shift?> UpdateShiftAsync(int id, Shift updatedShift, string vdlId)
     {
         var existingShift = await _context.Set<Shift>().FindAsync(id);
         if (existingShift == null) return null;
@@ -38,7 +38,7 @@ public class ShiftService
         existingShift.Status = updatedShift.Status;
         existingShift.StartTime = updatedShift.StartTime;
         existingShift.EndTime = updatedShift.EndTime;
-        existingShift.UpdatedBy = userId;
+        existingShift.UpdatedBy = vdlId;
         existingShift.UpdatedDate = DateTime.UtcNow;
 
         _context.Set<Shift>().Update(existingShift);
@@ -46,14 +46,14 @@ public class ShiftService
         return existingShift;
     }
 
-    public async Task<bool> SoftDeleteShiftAsync(int id, int userId)
+    public async Task<bool> SoftDeleteShiftAsync(int id, string vdlId)
     {
         var shift = await _context.Set<Shift>().FindAsync(id);
         if (shift == null) return false;
 
         shift.IsDeleted = true;
         shift.Status = 2; // 2 = Deleted Status
-        shift.UpdatedBy = userId;
+        shift.UpdatedBy = vdlId;
         shift.UpdatedDate = DateTime.UtcNow;
 
         _context.Set<Shift>().Update(shift);

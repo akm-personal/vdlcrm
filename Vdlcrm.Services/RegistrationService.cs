@@ -119,6 +119,7 @@ public class RegistrationService
                 Username = username,
                 Email = student.Email.ToLower(), // Case-insensitive email
                 MobileNumber = student.MobileNumber,
+            CreatedBy = student.CreatedBy,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword),
                 RoleId = 4, // Student role
                 IsActive = true,

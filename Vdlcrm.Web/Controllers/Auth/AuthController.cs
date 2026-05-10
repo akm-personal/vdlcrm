@@ -65,7 +65,8 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation($"Registration attempt for user: {request.Username}");
 
-        var response = await _authService.RegisterAsync(request);
+        var createdBy = User.Identity?.IsAuthenticated == true ? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value : "self";
+        var response = await _authService.RegisterAsync(request, createdBy ?? "self");
 
         if (!response.Success)
         {

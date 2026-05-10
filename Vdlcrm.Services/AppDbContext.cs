@@ -17,6 +17,10 @@ public class AppDbContext : DbContext
     public DbSet<FeePayment> FeePayments { get; set; }
     public DbSet<Shift> Shifts { get; set; }
     public DbSet<AppStatus> Statuses { get; set; }
+    public DbSet<EndpointPermission> EndpointPermissions { get; set; }
+    public DbSet<SeatRow> SeatRows { get; set; }
+    public DbSet<Seat> Seats { get; set; }
+    public DbSet<SeatAssignment> SeatAssignments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +40,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("student_details");
             entity.HasKey(e => e.Id);
+            entity.HasAlternateKey(e => e.VdlId);
             entity.Property(e => e.Id).HasColumnOrder(0);
             entity.Property(e => e.VdlId).IsRequired().HasMaxLength(50).HasColumnOrder(1);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100).HasColumnOrder(2);
@@ -102,17 +107,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CreatedDate).IsRequired();
             entity.Property(e => e.UpdatedDate).IsRequired();
             entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
-
-            // Foreign key relationships
-            entity.HasOne<User>()
-                .WithMany()
-                .HasForeignKey(e => e.CreatedBy)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne<User>()
-                .WithMany()
-                .HasForeignKey(e => e.UpdatedBy)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure FeeRecord entity
@@ -127,13 +121,9 @@ public class AppDbContext : DbContext
             
             entity.HasOne(e => e.Student)
                 .WithMany()
-                .HasForeignKey(e => e.StudentId)
+                .HasForeignKey(e => e.VdlId)
+                .HasPrincipalKey(s => s.VdlId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
-            entity.HasOne(e => e.CreatedByUser)
-                .WithMany()
-                .HasForeignKey(e => e.CreatedBy)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure FeePayment entity
@@ -150,18 +140,14 @@ public class AppDbContext : DbContext
                 .WithMany(f => f.FeePayments)
                 .HasForeignKey(e => e.FeeRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
-                
-            entity.HasOne(e => e.CollectedByUser)
-                .WithMany()
-                .HasForeignKey(e => e.CollectedBy)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure Status entity
         modelBuilder.Entity<AppStatus>(entity =>
         {
             entity.ToTable("statuses");
-            entity.HasKey(e => e.StatusId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.StatusType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.StatusName).IsRequired().HasMaxLength(50);
             entity.HasIndex(e => new { e.StatusType, e.StatusName }).IsUnique();
@@ -170,20 +156,66 @@ public class AppDbContext : DbContext
             // Seed default statuses into the database
             entity.HasData(
                 // Fee Statuses
-                new AppStatus { StatusId = 1, StatusType = "Fee", StatusName = "Pending", IsActive = true },
-                new AppStatus { StatusId = 2, StatusType = "Fee", StatusName = "Partial", IsActive = true },
-                new AppStatus { StatusId = 3, StatusType = "Fee", StatusName = "Paid", IsActive = true },
+                new AppStatus { Id = 1, StatusId = 1, StatusType = "Fee", StatusName = "Pending", IsActive = true },
+                new AppStatus { Id = 2, StatusId = 2, StatusType = "Fee", StatusName = "Partial", IsActive = true },
+                new AppStatus { Id = 3, StatusId = 3, StatusType = "Fee", StatusName = "Paid", IsActive = true },
                 
                 // General Statuses (For Shift, User, etc.)
-                new AppStatus { StatusId = 4, StatusType = "General", StatusName = "Active", IsActive = true },
-                new AppStatus { StatusId = 5, StatusType = "General", StatusName = "Not Active", IsActive = true },
+                new AppStatus { Id = 4, StatusId = 4, StatusType = "General", StatusName = "Active", IsActive = true },
+                new AppStatus { Id = 5, StatusId = 5, StatusType = "General", StatusName = "Not Active", IsActive = true },
 
                 // Student Statuses
-                new AppStatus { StatusId = 6, StatusType = "Student", StatusName = "Active", IsActive = true },
-                new AppStatus { StatusId = 7, StatusType = "Student", StatusName = "Not Active", IsActive = true },
-                new AppStatus { StatusId = 8, StatusType = "Student", StatusName = "Dropped", IsActive = true },
-                new AppStatus { StatusId = 9, StatusType = "Student", StatusName = "Cancelled", IsActive = true }
+                new AppStatus { Id = 6, StatusId = 6, StatusType = "Student", StatusName = "Active", IsActive = true },
+                new AppStatus { Id = 7, StatusId = 7, StatusType = "Student", StatusName = "Not Active", IsActive = true },
+                new AppStatus { Id = 8, StatusId = 8, StatusType = "Student", StatusName = "Dropped", IsActive = true },
+                new AppStatus { Id = 9, StatusId = 9, StatusType = "Student", StatusName = "Cancelled", IsActive = true }
             );
+        });
+
+        // Configure EndpointPermission entity
+        modelBuilder.Entity<EndpointPermission>(entity =>
+        {
+            entity.ToTable("endpoint_permissions");
+            entity.HasKey(e => e.Id);
+        });
+
+        // Configure SeatRow entity
+        modelBuilder.Entity<SeatRow>(entity =>
+        {
+            entity.ToTable("seat_rows");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RowName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RowOrder).IsRequired();
+            entity.Property(e => e.IsLocked).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+        });
+
+        // Configure Seat entity
+        modelBuilder.Entity<Seat>(entity =>
+        {
+            entity.ToTable("seats");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SeatLabel).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.IsLocked).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            entity.HasOne(e => e.SeatRow)
+                .WithMany(r => r.Seats)
+                .HasForeignKey(e => e.SeatRowId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure SeatAssignment entity
+        modelBuilder.Entity<SeatAssignment>(entity =>
+        {
+            entity.ToTable("seat_assignments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            entity.HasOne(e => e.Seat)
+                .WithMany(s => s.SeatAssignments)
+                .HasForeignKey(e => e.SeatId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -19,7 +19,7 @@ namespace Vdlcrm.Services.Migrations
 
             modelBuilder.Entity("Vdlcrm.Model.AppStatus", b =>
                 {
-                    b.Property<int>("StatusId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -27,6 +27,9 @@ namespace Vdlcrm.Services.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
+
+                    b.Property<int>("StatusId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("StatusName")
                         .IsRequired()
@@ -38,7 +41,7 @@ namespace Vdlcrm.Services.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.HasKey("StatusId");
+                    b.HasKey("Id");
 
                     b.HasIndex("StatusType", "StatusName")
                         .IsUnique();
@@ -48,67 +51,101 @@ namespace Vdlcrm.Services.Migrations
                     b.HasData(
                         new
                         {
-                            StatusId = 1,
+                            Id = 1,
                             IsActive = true,
+                            StatusId = 1,
                             StatusName = "Pending",
                             StatusType = "Fee"
                         },
                         new
                         {
-                            StatusId = 2,
+                            Id = 2,
                             IsActive = true,
+                            StatusId = 2,
                             StatusName = "Partial",
                             StatusType = "Fee"
                         },
                         new
                         {
-                            StatusId = 3,
+                            Id = 3,
                             IsActive = true,
+                            StatusId = 3,
                             StatusName = "Paid",
                             StatusType = "Fee"
                         },
                         new
                         {
+                            Id = 4,
+                            IsActive = true,
                             StatusId = 4,
-                            IsActive = true,
                             StatusName = "Active",
                             StatusType = "General"
                         },
                         new
                         {
+                            Id = 5,
+                            IsActive = true,
                             StatusId = 5,
-                            IsActive = true,
                             StatusName = "Not Active",
                             StatusType = "General"
                         },
                         new
                         {
-                            StatusId = 6,
+                            Id = 6,
                             IsActive = true,
+                            StatusId = 6,
                             StatusName = "Active",
                             StatusType = "Student"
                         },
                         new
                         {
-                            StatusId = 7,
+                            Id = 7,
                             IsActive = true,
+                            StatusId = 7,
                             StatusName = "Not Active",
                             StatusType = "Student"
                         },
                         new
                         {
-                            StatusId = 8,
+                            Id = 8,
                             IsActive = true,
+                            StatusId = 8,
                             StatusName = "Dropped",
                             StatusType = "Student"
                         },
                         new
                         {
-                            StatusId = 9,
+                            Id = 9,
                             IsActive = true,
+                            StatusId = 9,
                             StatusName = "Cancelled",
                             StatusType = "Student"
                         });
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.EndpointPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RouteUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("endpoint_permissions", (string)null);
                 });
 
             modelBuilder.Entity("Vdlcrm.Model.FeePayment", b =>
@@ -120,8 +157,8 @@ namespace Vdlcrm.Services.Migrations
                     b.Property<decimal>("AmountPaid")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<int?>("CollectedBy")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("CollectedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
@@ -142,8 +179,6 @@ namespace Vdlcrm.Services.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectedBy");
-
                     b.HasIndex("FeeRecordId");
 
                     b.ToTable("fee_payments", (string)null);
@@ -155,8 +190,8 @@ namespace Vdlcrm.Services.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
@@ -175,20 +210,19 @@ namespace Vdlcrm.Services.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("StudentId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<decimal>("TotalFee")
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("VdlId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
-
-                    b.HasIndex("StudentId");
+                    b.HasIndex("VdlId");
 
                     b.ToTable("fee_records", (string)null);
                 });
@@ -198,6 +232,9 @@ namespace Vdlcrm.Services.Migrations
                     b.Property<int>("RoleSequenceId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("INTEGER");
@@ -215,14 +252,142 @@ namespace Vdlcrm.Services.Migrations
                     b.ToTable("roles", (string)null);
                 });
 
+            modelBuilder.Entity("Vdlcrm.Model.Seat", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("SeatLabel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SeatOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SeatRowId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeatRowId");
+
+                    b.ToTable("seats", (string)null);
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.SeatAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AssignedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("RemovedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SeatId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeatId");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("seat_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.SeatRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("RowName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RowOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("seat_rows", (string)null);
+                });
+
             modelBuilder.Entity("Vdlcrm.Model.Shift", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
@@ -250,20 +415,16 @@ namespace Vdlcrm.Services.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(1);
 
-                    b.Property<int?>("UpdatedBy")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
-
                     b.HasIndex("ShiftName")
                         .IsUnique();
-
-                    b.HasIndex("UpdatedBy");
 
                     b.ToTable("shifts", (string)null);
                 });
@@ -289,6 +450,9 @@ namespace Vdlcrm.Services.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT")
                         .HasColumnOrder(10);
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT")
@@ -365,6 +529,9 @@ namespace Vdlcrm.Services.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
 
@@ -431,28 +598,51 @@ namespace Vdlcrm.Services.Migrations
 
             modelBuilder.Entity("Vdlcrm.Model.FeePayment", b =>
                 {
-                    b.HasOne("Vdlcrm.Model.User", "CollectedByUser")
-                        .WithMany()
-                        .HasForeignKey("CollectedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Vdlcrm.Model.FeeRecord", "FeeRecord")
                         .WithMany("FeePayments")
                         .HasForeignKey("FeeRecordId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CollectedByUser");
-
                     b.Navigation("FeeRecord");
                 });
 
             modelBuilder.Entity("Vdlcrm.Model.FeeRecord", b =>
                 {
-                    b.HasOne("Vdlcrm.Model.User", "CreatedByUser")
+                    b.HasOne("Vdlcrm.Model.Student", "Student")
                         .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("VdlId")
+                        .HasPrincipalKey("VdlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.Seat", b =>
+                {
+                    b.HasOne("Vdlcrm.Model.SeatRow", "SeatRow")
+                        .WithMany("Seats")
+                        .HasForeignKey("SeatRowId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SeatRow");
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.SeatAssignment", b =>
+                {
+                    b.HasOne("Vdlcrm.Model.Seat", "Seat")
+                        .WithMany("SeatAssignments")
+                        .HasForeignKey("SeatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Vdlcrm.Model.Shift", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Vdlcrm.Model.Student", "Student")
                         .WithMany()
@@ -460,23 +650,11 @@ namespace Vdlcrm.Services.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CreatedByUser");
+                    b.Navigation("Seat");
+
+                    b.Navigation("Shift");
 
                     b.Navigation("Student");
-                });
-
-            modelBuilder.Entity("Vdlcrm.Model.Shift", b =>
-                {
-                    b.HasOne("Vdlcrm.Model.User", null)
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Vdlcrm.Model.User", null)
-                        .WithMany()
-                        .HasForeignKey("UpdatedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Vdlcrm.Model.User", b =>
@@ -494,6 +672,16 @@ namespace Vdlcrm.Services.Migrations
             modelBuilder.Entity("Vdlcrm.Model.FeeRecord", b =>
                 {
                     b.Navigation("FeePayments");
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.Seat", b =>
+                {
+                    b.Navigation("SeatAssignments");
+                });
+
+            modelBuilder.Entity("Vdlcrm.Model.SeatRow", b =>
+                {
+                    b.Navigation("Seats");
                 });
 #pragma warning restore 612, 618
         }

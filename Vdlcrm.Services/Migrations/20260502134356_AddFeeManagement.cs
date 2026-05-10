@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -17,7 +17,7 @@ namespace Vdlcrm.Services.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    StudentId = table.Column<int>(type: "INTEGER", nullable: false),
+                    VdlId = table.Column<string>(type: "TEXT", nullable: false),
                     StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     EndDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     TotalFee = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
@@ -31,10 +31,10 @@ namespace Vdlcrm.Services.Migrations
                 {
                     table.PrimaryKey("PK_fee_records", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_fee_records_student_details_StudentId",
-                        column: x => x.StudentId,
+                        name: "FK_fee_records_student_details_VdlId",
+                        column: x => x.VdlId,
                         principalTable: "student_details",
-                        principalColumn: "Id",
+                        principalColumn: "VdlId",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_fee_records_users_CreatedBy",
@@ -126,9 +126,9 @@ namespace Vdlcrm.Services.Migrations
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
-                name: "IX_fee_records_StudentId",
+                name: "IX_fee_records_VdlId",
                 table: "fee_records",
-                column: "StudentId");
+                column: "VdlId");
 
             /* shifts table ke indexes bhi skip kar rahe hain
             migrationBuilder.CreateIndex(
