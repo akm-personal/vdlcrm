@@ -1,13 +1,22 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Vdlcrm.Model;
 
 namespace Vdlcrm.Services;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    private readonly ITenantResolverService? _tenantResolver;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, ITenantResolverService? tenantResolver = null) : base(options)
     {
+        _tenantResolver = tenantResolver;
     }
+
+    // Helper property to get the current schema for caching
+    public string CurrentSchema => (_tenantResolver?.CurrentTenant?.Provider?.ToLower() == "postgresql" || _tenantResolver?.CurrentTenant?.Provider?.ToLower() == "sqlserver") 
+        ? _tenantResolver.CurrentTenant.TenantId.ToLower() 
+        : "default_schema";
 
     public DbSet<WeatherForecast> WeatherForecasts { get; set; }
     public DbSet<Student> StudentDetails { get; set; }
@@ -22,9 +31,51 @@ public class AppDbContext : DbContext
     public DbSet<Seat> Seats { get; set; }
     public DbSet<SeatAssignment> SeatAssignments { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // Replace default model cache factory with our tenant-aware factory
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
+
+        // Agar request kisi specific tenant ke liye aayi hai
+        if (_tenantResolver?.CurrentTenant != null)
+        {
+            var provider = _tenantResolver.CurrentTenant.Provider.ToLower();
+            
+            if (provider == "postgresql")
+            {
+                 optionsBuilder.UseNpgsql(_tenantResolver.CurrentTenant.ConnectionString);
+            }
+            else if (provider == "sqlserver")
+            {
+                 optionsBuilder.UseSqlServer(_tenantResolver.CurrentTenant.ConnectionString);
+            }
+            else
+            {
+                optionsBuilder.UseSqlite(_tenantResolver.CurrentTenant.ConnectionString);
+            }
+        }
+        // Fallback: Agar connection string specify nahi hui (e.g. Migration chalate waqt)
+        else if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlite("Data Source=vdlcrm_default.db");
+        }
+        
+        base.OnConfiguring(optionsBuilder);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Postgres aur SQL Server ke liye dynamically default schema set karein
+        if (_tenantResolver?.CurrentTenant != null)
+        {
+            var provider = _tenantResolver.CurrentTenant.Provider.ToLower();
+            if (provider == "postgresql" || provider == "sqlserver")
+            {
+                modelBuilder.HasDefaultSchema(_tenantResolver.CurrentTenant.TenantId.ToLower());
+            }
+        }
 
         // Configure WeatherForecast entity
         modelBuilder.Entity<WeatherForecast>(entity =>
@@ -217,5 +268,16 @@ public class AppDbContext : DbContext
                 .HasForeignKey(e => e.SeatId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+}
+
+// Custom Cache Key Factory: Ye ensure karega ki EF Core har tenant schema ka alag model cache banaye
+public class TenantModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime)
+    {
+        var dbContext = context as AppDbContext;
+        var schema = dbContext?.CurrentSchema ?? "default_schema";
+        return (context.GetType(), schema, designTime);
     }
 }

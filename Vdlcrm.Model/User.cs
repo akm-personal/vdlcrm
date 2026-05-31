@@ -16,4 +16,6 @@ public class User
 
     // Navigation property
     public virtual Role? Role { get; set; }
+    public string TenantId { get; set; } = string.Empty;
+
 }
