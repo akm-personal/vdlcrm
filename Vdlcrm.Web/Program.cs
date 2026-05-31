@@ -10,6 +10,7 @@ using NSwag;
 using NSwag.Generation.Processors.Security;
 using NSwag.AspNetCore;
 using Vdlcrm.Web.Middleware;
+using Vdlcrm.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,7 +80,11 @@ builder.Services.AddSwaggerDocument(config =>
     config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
     config.OperationProcessors.Add(new Vdlcrm.Web.Swagger.RoleBasedOperationProcessor("Student"));
 });
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
@@ -107,7 +112,17 @@ builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift manag
 builder.Services.AddScoped<SeatManagementService>();  // Add SeatManagementService for seat and row management
 builder.Services.AddScoped<FeeService>();  // Add FeeService for fee management
 builder.Services.AddSingleton<ErrorLoggingService>(); // Middleware me use hone ki wajah se ise Singleton banana zaroori hai
+
+// 1. HTTP Header access karne ke liye zaroori
 builder.Services.AddHttpContextAccessor(); 
+
+// 2. Apne Master Database ko register karein (Ye common configuration file hai)
+builder.Services.AddDbContext<MasterDbContext>(options =>
+    options.UseSqlite("Data Source=vdlcrm_master.db"));
+
+// 3. Tenant Resolver ko Scoped banayein
+builder.Services.AddScoped<ITenantResolverService, TenantResolverService>();
+
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "default-secret-key-that-is-long-enough";

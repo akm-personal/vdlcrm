@@ -19,13 +19,17 @@ public class StudentController : ControllerBase
     private readonly ILogger<StudentController> _logger;
     private readonly ErrorLoggingService _errorLoggingService;
     private readonly AppDbContext _dbContext;
+    private readonly MasterDbContext _masterDbContext;
+    private readonly ITenantResolverService _tenantResolver;
 
-    public StudentController(StudentService studentService, ILogger<StudentController> logger, ErrorLoggingService errorLoggingService, AppDbContext dbContext)
+    public StudentController(StudentService studentService, ILogger<StudentController> logger, ErrorLoggingService errorLoggingService, AppDbContext dbContext, MasterDbContext masterDbContext, ITenantResolverService tenantResolver)
     {
         _studentService = studentService;
         _logger = logger;
         _errorLoggingService = errorLoggingService;
         _dbContext = dbContext;
+        _masterDbContext = masterDbContext;
+        _tenantResolver = tenantResolver;
     }
 
     /// <summary>
@@ -105,6 +109,22 @@ public class StudentController : ControllerBase
                 CreatedDate = registeredStudent.CreatedDate,
                 Message = "Student registered successfully. Use the provided VDL ID, username, and temporary password to login."
             };
+
+            // Master DB me bhi User insert karein taaki wo globally login kar sake
+            var currentTenantId = _tenantResolver.CurrentTenant?.TenantId ?? "default_schema";
+            var masterUser = new User
+            {
+                Username = userAccount.Username,
+                Email = userAccount.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword), // tempPassword is plain text here
+                RoleId = userAccount.RoleId,
+                IsActive = true,
+                CreatedDate = DateTime.UtcNow,
+                UpdatedDate = DateTime.UtcNow,
+                TenantId = currentTenantId
+            };
+            _masterDbContext.Users.Add(masterUser);
+            await _masterDbContext.SaveChangesAsync();
 
             _logger.LogInformation($"Student registration successful: VdlId={registeredStudent.VdlId}, Username={userAccount.Username}");
 
