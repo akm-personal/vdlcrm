@@ -227,6 +227,50 @@ namespace Vdlcrm.Services.Migrations
                     b.ToTable("fee_records", (string)null);
                 });
 
+            modelBuilder.Entity("Vdlcrm.Model.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PublishDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetAudience")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Vdlcrm.Model.Role", b =>
                 {
                     b.Property<int>("RoleSequenceId")
@@ -324,8 +368,9 @@ namespace Vdlcrm.Services.Migrations
                     b.Property<int>("ShiftId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("StudentId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("StudentVdlId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -333,7 +378,7 @@ namespace Vdlcrm.Services.Migrations
 
                     b.HasIndex("ShiftId");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("StudentVdlId");
 
                     b.ToTable("seat_assignments", (string)null);
                 });
@@ -650,7 +695,8 @@ namespace Vdlcrm.Services.Migrations
 
                     b.HasOne("Vdlcrm.Model.Student", "Student")
                         .WithMany()
-                        .HasForeignKey("StudentId")
+                        .HasForeignKey("StudentVdlId")
+                        .HasPrincipalKey("VdlId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

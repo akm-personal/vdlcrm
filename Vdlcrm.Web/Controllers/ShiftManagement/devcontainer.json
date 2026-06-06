@@ -1,9 +1,19 @@
 {
-  "forwardPorts": [5000],
+  "forwardPorts": [5000, 5432, 1433],
   "portsAttributes": {
     "5000": {
       "label": "API",
       "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent",
+      "visibility": "public"
+    },
+    "1433": {
+      "label": "SQL Server",
+      "onAutoForward": "silent",
       "visibility": "public"
     }
   }

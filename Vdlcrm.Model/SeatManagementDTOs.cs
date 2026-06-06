@@ -29,7 +29,7 @@ public class CreateSeatAssignmentRequest
 {
     public int SeatId { get; set; }
     public int ShiftId { get; set; }
-    public int StudentId { get; set; }
+    public string StudentVdlId { get; set; } = string.Empty; 
 }
 
 public class SeatRowResponse
@@ -60,7 +60,7 @@ public class SeatAssignmentResponse
     public int ShiftId { get; set; }
     public int StudentId { get; set; }
     public string? StudentName { get; set; }
-    public string? StudentVdlId { get; set; }
+    public string? StudentVdlId { get; set; }= string.Empty; 
     public string? ShiftName { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime AssignedDate { get; set; }

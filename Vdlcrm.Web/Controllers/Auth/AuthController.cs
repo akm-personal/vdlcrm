@@ -211,6 +211,58 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Change password for currently logged-in user at any time
+    /// </summary>
+    /// <param name="request">Change password request with old and new password</param>
+    /// <returns>Success response</returns>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest(new { success = false, message = "Old password and new password are required." });
+        }
+
+        var username = User.Identity?.Name;
+        if (string.IsNullOrEmpty(username))
+        {
+            return Unauthorized(new { success = false, message = "User not identified from token." });
+        }
+
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "User not found." });
+            }
+
+            // Verify old password
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+            {
+                return BadRequest(new { success = false, message = "Incorrect old password." });
+            }
+
+            // Update with new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedDate = DateTime.UtcNow;
+
+            _dbContext.Users.Update(user);
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation($"Password successfully changed for user: {username}");
+
+            return Ok(new { success = true, message = "Password changed successfully." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error changing password for user {username}: {ex.Message}");
+            return StatusCode(500, new { success = false, message = "An error occurred while changing password." });
+        }
+    }
+
+    /// <summary>
     /// Logout user (requires authentication token)
     /// </summary>
     /// <returns>Logout success message</returns>
@@ -230,4 +282,10 @@ public class AuthController : ControllerBase
         // To enforce server-side logout in the future, you would implement a Token Blacklist here.
         return Ok(new { success = true, message = $"User '{username}' logged out successfully. Please remove the token from the client application." });
     }
+}
+
+public class ChangePasswordRequest
+{
+    public string OldPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
 }

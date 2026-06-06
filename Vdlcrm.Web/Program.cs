@@ -111,6 +111,7 @@ builder.Services.AddScoped<PasswordUpdateService>();  // Add PasswordUpdateServi
 builder.Services.AddScoped<ShiftService>();  // Add ShiftService for shift management
 builder.Services.AddScoped<SeatManagementService>();  // Add SeatManagementService for seat and row management
 builder.Services.AddScoped<FeeService>();  // Add FeeService for fee management
+builder.Services.AddSignalR(); // Add SignalR for real-time notifications
 builder.Services.AddSingleton<ErrorLoggingService>(); // Middleware me use hone ki wajah se ise Singleton banana zaroori hai
 
 // 1. HTTP Header access karne ke liye zaroori
@@ -118,7 +119,7 @@ builder.Services.AddHttpContextAccessor();
 
 // 2. Apne Master Database ko register karein (Ye common configuration file hai)
 builder.Services.AddDbContext<MasterDbContext>(options =>
-    options.UseSqlite("Data Source=vdlcrm_master.db"));
+    options.UseSqlite("Data Source=main_database/vdlcrm_master.db"));
 
 // 3. Tenant Resolver ko Scoped banayein
 builder.Services.AddScoped<ITenantResolverService, TenantResolverService>();
@@ -281,6 +282,7 @@ app.MapGet("/db-viewer", async (AppDbContext db) =>
     return Results.Content(html, "text/html; charset=utf-8");
     });
 
+app.MapHub<Vdlcrm.Web.Hubs.NotificationHub>("/hubs/notifications");
 app.MapControllers();
 
 string GetDatabaseBrowserHtml()

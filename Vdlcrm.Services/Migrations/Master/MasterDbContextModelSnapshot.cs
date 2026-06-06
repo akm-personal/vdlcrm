@@ -17,6 +17,27 @@ namespace Vdlcrm.Services.Migrations.Master
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.4");
 
+            modelBuilder.Entity("Vdlcrm.Model.Role", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RoleSequenceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("roles", (string)null);
+                });
+
             modelBuilder.Entity("Vdlcrm.Model.TenantInfo", b =>
                 {
                     b.Property<string>("TenantId")

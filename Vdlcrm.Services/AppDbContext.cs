@@ -30,6 +30,8 @@ public class AppDbContext : DbContext
     public DbSet<SeatRow> SeatRows { get; set; }
     public DbSet<Seat> Seats { get; set; }
     public DbSet<SeatAssignment> SeatAssignments { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -57,7 +59,7 @@ public class AppDbContext : DbContext
         // Fallback: Agar connection string specify nahi hui (e.g. Migration chalate waqt)
         else if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlite("Data Source=vdlcrm_default.db");
+            optionsBuilder.UseSqlite("Data Source=main_database/vdlcrm.db");
         }
         
         base.OnConfiguring(optionsBuilder);
@@ -266,6 +268,17 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Seat)
                 .WithMany(s => s.SeatAssignments)
                 .HasForeignKey(e => e.SeatId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Student)
+                .WithMany()
+                .HasForeignKey(e => e.StudentVdlId)
+                .HasPrincipalKey(s => s.VdlId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Shift)
+                .WithMany()
+                .HasForeignKey(e => e.ShiftId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -127,6 +127,7 @@ public class PermissionController : ControllerBase
             // Auth & Profiles (All Logged-in Users)
             ("api/Auth/roles", "GET", new[] { 1, 2 }),
             ("api/Auth/update-password", "POST", new[] { 1, 2, 3, 4 }),
+            ("api/Auth/change-password", "POST", new[] { 1, 2, 3, 4 }),
             ("api/Auth/logout", "POST", new[] { 1, 2, 3, 4 }),
             
             // Student Management

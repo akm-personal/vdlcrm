@@ -96,6 +96,26 @@ public class SeatManagementController : ControllerBase
         }
     }
 
+    [HttpPost("seats/create-bulk")]
+    public async Task<IActionResult> CreateSeatsBulk([FromBody] CreateSeatBulkRequest request)
+    {
+        try
+        {
+            if (request.Count <= 0)
+            {
+                return BadRequest(new { message = "Number of seats to create must be greater than 0." });
+            }
+
+            var vdlId = GetCurrentVdlId();
+            var seats = await _seatService.CreateSeatsBulkAsync(request.SeatRowId, request.Count, vdlId, vdlId);
+            return Ok(new { message = $"{seats.Count} seats created successfully.", data = seats });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("seats/update/{id}")]
     public async Task<IActionResult> UpdateSeat(int id, [FromBody] UpdateSeatRequest request)
     {
@@ -128,13 +148,13 @@ public class SeatManagementController : ControllerBase
         try
         {
             var vdlId = GetCurrentVdlId();
-            var assignment = await _seatService.CreateSeatAssignmentAsync(request.SeatId, request.ShiftId, request.StudentId, vdlId);
+                var assignment = await _seatService.CreateSeatAssignmentAsync(request.SeatId, request.ShiftId, request.StudentVdlId, vdlId);
             return Ok(new SeatAssignmentResponse
             {
                 Id = assignment.Id,
                 SeatId = assignment.SeatId,
                 ShiftId = assignment.ShiftId,
-                StudentId = assignment.StudentId,
+                    StudentVdlId = assignment.StudentVdlId,
                 IsDeleted = assignment.IsDeleted,
                 AssignedDate = assignment.AssignedDate
             });
