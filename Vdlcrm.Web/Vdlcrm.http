@@ -1,0 +1,3 @@
+### Vdlcrm.Web HTTP requests
+
+GET http://localhost:5000/weatherforecast

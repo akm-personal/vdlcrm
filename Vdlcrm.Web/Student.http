@@ -1,0 +1,53 @@
+### Student Registration API Tests
+
+## Register a New Student
+POST http://localhost:5000/api/student/register
+Content-Type: application/json
+
+{
+  "vdlId": "VDL001",
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "fatherName": "James Doe",
+  "dateOfBirth": "2008-05-15T00:00:00",
+  "gender": "Male",
+  "address": "123 Main Street, City, State 12345",
+  "mobileNumber": "9876543210",
+  "alternateNumber": "9876543211",
+  "class": "10th",
+  "idProof": "Aadhar123456789",
+  "shiftType": "Morning",
+  "seatNumber": 1,
+  "studentStatus": "Active"
+}
+
+### Get All Students
+GET http://localhost:5000/api/student
+
+### Get Student by ID
+GET http://localhost:5000/api/student/1
+
+### Update Student
+PUT http://localhost:5000/api/student/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "vdlId": "VDL001",
+  "name": "John Doe Updated",
+  "email": "john.updated@example.com",
+  "fatherName": "James Doe",
+  "dateOfBirth": "2008-05-15T00:00:00",
+  "gender": "Male",
+  "address": "456 New Street, City, State 67890",
+  "mobileNumber": "9876543210",
+  "alternateNumber": "9876543211",
+  "class": "10th",
+  "idProof": "Aadhar123456789",
+  "shiftType": "Afternoon",
+  "seatNumber": 2,
+  "studentStatus": "Active"
+}
+
+### Delete Student
+DELETE http://localhost:5000/api/student/1

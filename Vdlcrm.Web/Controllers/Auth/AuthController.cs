@@ -1,0 +1,291 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Vdlcrm.Model.DTOs;
+using Vdlcrm.Services;
+
+namespace Vdlcrm.Web.Controllers.Auth;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly AuthService _authService;
+        private readonly PasswordUpdateService _passwordUpdateService;
+    private readonly AppDbContext _dbContext;
+    private readonly ILogger<AuthController> _logger;
+
+    public AuthController(AuthService authService, PasswordUpdateService passwordUpdateService, AppDbContext dbContext, ILogger<AuthController> logger)
+    {
+        _authService = authService;
+            _passwordUpdateService = passwordUpdateService;
+        _dbContext = dbContext;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Login with username and password
+    /// </summary>
+    /// <param name="request">Login request containing username and password</param>
+    /// <returns>JWT token and user information if login is successful</returns>
+    [HttpPost("login")]
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        _logger.LogInformation($"Login attempt for user: {request.Username}");
+
+        var response = await _authService.LoginAsync(request);
+
+        if (!response.Success)
+        {
+            _logger.LogWarning($"Failed login attempt for user: {request.Username}");
+            return Unauthorized(response);
+        }
+
+        _logger.LogInformation($"Successful login for user: {request.Username}");
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Register a new user
+    /// </summary>
+    /// <param name="request">Registration request</param>
+    /// <returns>Registration response</returns>
+    [HttpPost("register")]
+    public async Task<ActionResult<LoginResponse>> Register([FromBody] RegisterRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        _logger.LogInformation($"Registration attempt for user: {request.Username}");
+
+        var createdBy = User.Identity?.IsAuthenticated == true ? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value : "self";
+        var response = await _authService.RegisterAsync(request, createdBy ?? "self");
+
+        if (!response.Success)
+        {
+            _logger.LogWarning($"Failed registration attempt for user: {request.Username}");
+            return BadRequest(response);
+        }
+
+        _logger.LogInformation($"Successful registration for user: {request.Username}");
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Swagger UI auto-login endpoint (OAuth2 Password Flow)
+    /// </summary>
+    [HttpPost("swagger-login")]
+    [Consumes("application/x-www-form-urlencoded")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> SwaggerLogin([FromForm] string username, [FromForm] string password)
+    {
+        var request = new LoginRequest { Username = username, Password = password };
+        var response = await _authService.LoginAsync(request);
+
+        if (!response.Success)
+        {
+            _logger.LogWarning($"Swagger login failed for user: {username}");
+            return Unauthorized(new { error = "invalid_grant", error_description = "Invalid username or password" });
+        }
+
+        return Ok(new
+        {
+            access_token = response.Token,
+            token_type = "Bearer",
+            expires_in = 3600
+        });
+    }
+
+    /// <summary>
+    /// Get all available roles
+    /// </summary>
+    /// <returns>List of all roles</returns>
+    [HttpGet("roles")]
+    public async Task<ActionResult> GetRoles()
+    {
+        try
+        {
+            var roles = await _authService.GetAllRolesAsync();
+            return Ok(new { success = true, data = roles });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error fetching roles: {ex.Message}");
+            return StatusCode(500, new { success = false, message = "Error fetching roles" });
+        }
+    }
+
+    /// <summary>
+    /// Update temporary password to permanent password - First-time login users only
+    /// Thread-safe for concurrent password updates
+    /// </summary>
+    /// <param name="request">Password update request with user ID, temp password, and new password</param>
+    /// <returns>Password update response with success status</returns>
+    [HttpPost("update-password")]
+    public async Task<ActionResult<UpdatePasswordResponse>> UpdatePassword([FromBody] UpdatePasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new UpdatePasswordResponse
+            {
+                Success = false,
+                Message = "Invalid request data",
+                UserId = request.UserId
+            });
+        }
+
+        if (request.UserId <= 0)
+        {
+            return BadRequest(new UpdatePasswordResponse
+            {
+                Success = false,
+                Message = "Invalid user ID"
+            });
+        }
+
+        try
+        {
+            _logger.LogInformation($"Password update attempt for user ID: {request.UserId}");
+
+            // Check if password change is required (first-time user)
+            var isFirstTimeChange = await _passwordUpdateService.IsFirstTimePasswordChangeRequiredAsync(request.UserId);
+            if (!isFirstTimeChange)
+            {
+                _logger.LogWarning($"User {request.UserId} attempted to change password but already changed");
+                return BadRequest(new UpdatePasswordResponse
+                {
+                    Success = false,
+                    Message = "Password has already been changed. Please use forgot password to reset.",
+                    UserId = request.UserId,
+                    IsPasswordChanged = true
+                });
+            }
+
+            // Update password (thread-safe)
+            bool success = await _passwordUpdateService.UpdatePasswordAsync(
+                request.UserId,
+                request.TempPassword,
+                request.NewPassword
+            );
+
+            _logger.LogInformation($"Password successfully updated for user ID: {request.UserId}");
+
+            return Ok(new UpdatePasswordResponse
+            {
+                Success = true,
+                Message = "Password updated successfully. Please login with your new password.",
+                UserId = request.UserId,
+                IsPasswordChanged = true,
+                UpdatedDate = DateTime.UtcNow
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning($"Validation error during password update for user {request.UserId}: {ex.Message}");
+            return BadRequest(new UpdatePasswordResponse
+            {
+                Success = false,
+                Message = ex.Message,
+                UserId = request.UserId
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error updating password for user {request.UserId}: {ex.Message}");
+            return StatusCode(500, new UpdatePasswordResponse
+            {
+                Success = false,
+                Message = ex.Message.Contains("Invalid temporary password") ? "Invalid temporary password" :
+                         ex.Message.Contains("User not found") ? "User not found" :
+                         "An error occurred while updating password",
+                UserId = request.UserId
+            });
+        }
+    }
+
+    /// <summary>
+    /// Change password for currently logged-in user at any time
+    /// </summary>
+    /// <param name="request">Change password request with old and new password</param>
+    /// <returns>Success response</returns>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest(new { success = false, message = "Old password and new password are required." });
+        }
+
+        var username = User.Identity?.Name;
+        if (string.IsNullOrEmpty(username))
+        {
+            return Unauthorized(new { success = false, message = "User not identified from token." });
+        }
+
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "User not found." });
+            }
+
+            // Verify old password
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+            {
+                return BadRequest(new { success = false, message = "Incorrect old password." });
+            }
+
+            // Update with new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedDate = DateTime.UtcNow;
+
+            _dbContext.Users.Update(user);
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation($"Password successfully changed for user: {username}");
+
+            return Ok(new { success = true, message = "Password changed successfully." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error changing password for user {username}: {ex.Message}");
+            return StatusCode(500, new { success = false, message = "An error occurred while changing password." });
+        }
+    }
+
+    /// <summary>
+    /// Logout user (requires authentication token)
+    /// </summary>
+    /// <returns>Logout success message</returns>
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    public ActionResult<object> Logout()
+    {
+        // Extract user information from the JWT Token claims
+        var username = User.Identity?.Name ?? "Unknown User";
+        var userId = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+        _logger.LogInformation($"Logout endpoint called by User ID: {userId}, Username: {username}");
+        
+        // Note: Since this API uses stateless JWTs, the actual logout happens on the client side
+        // by deleting the token from localStorage, sessionStorage, or cookies.
+        // To enforce server-side logout in the future, you would implement a Token Blacklist here.
+        return Ok(new { success = true, message = $"User '{username}' logged out successfully. Please remove the token from the client application." });
+    }
+}
+
+public class ChangePasswordRequest
+{
+    public string OldPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
