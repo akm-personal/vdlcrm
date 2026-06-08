@@ -48,7 +48,7 @@ public class PermissionController : ControllerBase
     public async Task<IActionResult> GetDbPermissions()
     {
         // DB me stored sari permissions get karein
-        var permissions = await _dbContext.Set<EndpointPermission>().ToListAsync();
+        var permissions = await _dbContext.Set<EndpointPermission>().AsNoTracking().ToListAsync();
         
         // APIs ko group karein taki response me comma-separated array (like [1, 2]) dikhe
         var groupedPermissions = permissions
@@ -141,7 +141,7 @@ public class PermissionController : ControllerBase
         };
 
         // Pehle se majood permissions ko memory me layen (delete nahi karna hai)
-        var existingPermissions = await _dbContext.Set<EndpointPermission>().ToListAsync();
+        var existingPermissions = await _dbContext.Set<EndpointPermission>().AsNoTracking().ToListAsync();
 
         // Expected list tayar karein
         var expectedPermissions = defaultPermissions.SelectMany(dp => 

@@ -7,6 +7,8 @@ using Vdlcrm.Services;
 using Vdlcrm.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
+using System;
 
 namespace Vdlcrm.Web.Middleware;
 
@@ -19,7 +21,7 @@ public class DynamicPermissionMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IMemoryCache cache)
     {
         var endpoint = context.GetEndpoint();
         if (endpoint == null)
@@ -53,14 +55,26 @@ public class DynamicPermissionMiddleware
                 using var scope = context.RequestServices.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                // DB mein check karein ki is URL ke liye koi permission maujud hai ya nahi
-                var isRouteConfigured = await dbContext.Set<EndpointPermission>()
-                    .AnyAsync(p => p.RouteUrl == routeUrl && p.HttpMethod == httpMethod);
+                // --- NEW LOGIC: Use Memory Cache for blazing fast permission checks ---
+                string routeCacheKey = $"route_config_{routeUrl}_{httpMethod}";
+                string accessCacheKey = $"route_access_{routeUrl}_{httpMethod}_{roleId}";
+
+                // 1. Check if route is configured in DB (with Cache)
+                if (!cache.TryGetValue(routeCacheKey, out bool isRouteConfigured))
+                {
+                    isRouteConfigured = await dbContext.Set<EndpointPermission>()
+                        .AnyAsync(p => p.RouteUrl == routeUrl && p.HttpMethod == httpMethod);
+                    cache.Set(routeCacheKey, isRouteConfigured, TimeSpan.FromMinutes(10));
+                }
 
                 if (isRouteConfigured) // Agar DB me config hai, tabhi dynamic check lagoo hoga
                 {
-                    var hasAccess = await dbContext.Set<EndpointPermission>()
-                        .AnyAsync(p => p.RouteUrl == routeUrl && p.HttpMethod == httpMethod && p.RoleId == roleId);
+                    if (!cache.TryGetValue(accessCacheKey, out bool hasAccess))
+                    {
+                        hasAccess = await dbContext.Set<EndpointPermission>()
+                            .AnyAsync(p => p.RouteUrl == routeUrl && p.HttpMethod == httpMethod && p.RoleId == roleId);
+                        cache.Set(accessCacheKey, hasAccess, TimeSpan.FromMinutes(10));
+                    }
 
                     if (!hasAccess)
                     {

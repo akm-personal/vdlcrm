@@ -112,7 +112,7 @@ public class TenantController : ControllerBase
     {
         try
         {
-            var tenants = await _masterDbContext.Tenants.ToListAsync();
+            var tenants = await _masterDbContext.Tenants.AsNoTracking().ToListAsync();
             return Ok(tenants);
         }
         catch (Exception ex)
@@ -363,39 +363,5 @@ public class TenantController : ControllerBase
         }
     }
 
-    [HttpPost("fix-seat-table")]
-    public async Task<IActionResult> FixSeatTable()
-    {
-        try
-        {
-            // Sirf seat_assignments table ko drop karke sahi schema ke sath recreate karenge
-            // Baaki pura database (students, users, fees, seats) ekdum safe rahega!
-            var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite("Data Source=main_database/vdlcrm.db").Options;
-            using var db = new AppDbContext(options, null);
-
-            await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS seat_assignments;");
-            
-            var createTableSql = @"
-                CREATE TABLE seat_assignments (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    SeatId INTEGER NOT NULL,
-                    ShiftId INTEGER NOT NULL,
-                    StudentVdlId TEXT NOT NULL,
-                    CreatedBy TEXT,
-                    IsDeleted INTEGER NOT NULL DEFAULT 0,
-                    AssignedDate TEXT NOT NULL,
-                    RemovedDate TEXT,
-                    FOREIGN KEY(SeatId) REFERENCES seats(Id) ON DELETE CASCADE,
-                    FOREIGN KEY(ShiftId) REFERENCES shifts(Id) ON DELETE CASCADE,
-                    FOREIGN KEY(StudentVdlId) REFERENCES student_details(VdlId) ON DELETE CASCADE
-                );";
-
-            await db.Database.ExecuteSqlRawAsync(createTableSql);
-            return Ok(new { message = "seat_assignments table fixed successfully! Database was NOT deleted." });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Failed to fix table", error = ex.Message });
-        }
-    }
+    
 }

@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System;
 using System.Security.Claims;
+using System.Threading.Channels;
+using System.Collections.Generic;
 using Vdlcrm.Services;
 using Vdlcrm.Model;
 
@@ -15,10 +17,54 @@ namespace Vdlcrm.Web.Middleware;
 public class ApiLoggingMiddleware
 {
     private readonly RequestDelegate _next;
+    private static readonly Channel<string> _logChannel = Channel.CreateUnbounded<string>();
+    private static bool _isWriterStarted = false;
+    private static readonly object _initLock = new object();
 
     public ApiLoggingMiddleware(RequestDelegate next)
     {
         _next = next;
+        
+        // Background worker ko sirf ek baar start karein
+        if (!_isWriterStarted)
+        {
+            lock (_initLock)
+            {
+                if (!_isWriterStarted)
+                {
+                    Task.Run(ProcessLogsBackgroundAsync);
+                    _isWriterStarted = true;
+                }
+            }
+        }
+    }
+
+    private static async Task ProcessLogsBackgroundAsync()
+    {
+        var buffer = new List<string>();
+        while (await _logChannel.Reader.WaitToReadAsync())
+        {
+            buffer.Clear();
+            // Memory queue se saare pending logs ek sath nikalein (Batching)
+            while (_logChannel.Reader.TryRead(out var logEntry))
+            {
+                buffer.Add(logEntry);
+            }
+
+            if (buffer.Count > 0)
+            {
+                try
+                {
+                    string logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+                    if (!Directory.Exists(logDirectory)) Directory.CreateDirectory(logDirectory);
+                    
+                    string logFilePath = Path.Combine(logDirectory, $"api_logs_{DateTime.UtcNow:yyyyMMdd}.txt");
+                    // Saare logs ek hi baar mein file me append kar dein
+                    await File.AppendAllLinesAsync(logFilePath, buffer);
+                }
+                catch { /* Ignore write errors to keep background task alive */ }
+            }
+        }
     }
 
     public async Task InvokeAsync(HttpContext context)

@@ -183,6 +183,7 @@ public class StudentController : ControllerBase
             
             // Sabhi students ki fees bulk me fetch karke har student ka latest status map karein (taaki N+1 query issue na ho)
             var feeRecords = await _dbContext.FeeRecords
+                .AsNoTracking()
                 .Where(f => vdlIds.Contains(f.VdlId))
                 .Select(f => new { 
                     f.Id, 
@@ -200,6 +201,7 @@ public class StudentController : ControllerBase
 
             // Users table se roles nikalna
             var userRolesList = await _dbContext.Users
+                .AsNoTracking()
                 .Include(u => u.Role)
                 .Where(u => vdlIds.Contains(u.Username))
                 .Select(u => new { u.Username, u.RoleId, RoleName = u.Role != null ? u.Role.RoleName : "Student" })
@@ -314,6 +316,7 @@ public class StudentController : ControllerBase
 
             // Last Fee status and dates nikaalna 
             var latestFee = await _dbContext.FeeRecords
+                .AsNoTracking()
                 .Where(f => f.VdlId == student.VdlId)
                 .OrderByDescending(f => f.CreatedDate)
                 .Select(f => new { 
@@ -340,7 +343,7 @@ public class StudentController : ControllerBase
             }
 
             // Role set karna
-            var user = await _dbContext.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == student.VdlId);
+            var user = await _dbContext.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == student.VdlId);
             student.RoleId = user?.RoleId ?? 4;
             student.RoleName = user?.Role?.RoleName ?? "Student";
 
@@ -430,6 +433,7 @@ public class StudentController : ControllerBase
 
             // Last Fee status and dates set karna
             var latestFee = await _dbContext.FeeRecords
+                .AsNoTracking()
                 .Where(f => f.VdlId == updatedStudent.VdlId)
                 .OrderByDescending(f => f.CreatedDate)
                 .Select(f => new { 
@@ -456,7 +460,7 @@ public class StudentController : ControllerBase
             }
 
             // Role set karna
-            var user = await _dbContext.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == updatedStudent.VdlId);
+            var user = await _dbContext.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == updatedStudent.VdlId);
             updatedStudent.RoleId = user?.RoleId ?? 4;
             updatedStudent.RoleName = user?.Role?.RoleName ?? "Student";
 

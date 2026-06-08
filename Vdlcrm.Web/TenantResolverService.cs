@@ -3,6 +3,7 @@ using Vdlcrm.Model;
 using System.Linq;
 using Vdlcrm.Services;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Vdlcrm.Web;
@@ -45,7 +46,7 @@ public class TenantResolverService : ITenantResolverService
                     var username = context.User.FindFirst(ClaimTypes.Name)?.Value;
                     if (!string.IsNullOrEmpty(username))
                     {
-                        var masterUser = masterDbContext.Users.FirstOrDefault(u => u.Username == username);
+                        var masterUser = masterDbContext.Users.AsNoTracking().FirstOrDefault(u => u.Username == username);
                         if (masterUser != null && !string.IsNullOrEmpty(masterUser.TenantId))
                         {
                             resolvedTenantId = masterUser.TenantId;
@@ -57,7 +58,7 @@ public class TenantResolverService : ITenantResolverService
             // 3. Agar TenantId successfully mil gaya, toh uski details Master DB se bind kar dein
             if (!string.IsNullOrEmpty(resolvedTenantId))
             {
-                CurrentTenant = masterDbContext.Tenants.FirstOrDefault(t => t.TenantId == resolvedTenantId);
+                CurrentTenant = masterDbContext.Tenants.AsNoTracking().FirstOrDefault(t => t.TenantId == resolvedTenantId);
             }
         }
     }

@@ -5,6 +5,8 @@ using Vdlcrm.Model.DTOs;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System;
+using Microsoft.EntityFrameworkCore;
+using Vdlcrm.Model;
 
 namespace Vdlcrm.Web.Controllers;
 
@@ -14,10 +16,12 @@ namespace Vdlcrm.Web.Controllers;
 public class SeatManagementController : ControllerBase
 {
     private readonly SeatManagementService _seatService;
+    private readonly AppDbContext _dbContext;
 
-    public SeatManagementController(SeatManagementService seatService)
+    public SeatManagementController(SeatManagementService seatService, AppDbContext dbContext)
     {
         _seatService = seatService;
+        _dbContext = dbContext;
     }
 
     private string GetCurrentVdlId()
@@ -149,6 +153,23 @@ public class SeatManagementController : ControllerBase
         {
             var vdlId = GetCurrentVdlId();
                 var assignment = await _seatService.CreateSeatAssignmentAsync(request.SeatId, request.ShiftId, request.StudentVdlId, vdlId);
+            
+            // --- NEW LOGIC: Update Student's SeatNumber and ShiftType ---
+            var student = await _dbContext.StudentDetails.FirstOrDefaultAsync(s => s.VdlId == request.StudentVdlId);
+            if (student != null)
+            {
+                // Db se Seat aur Shift ka actual naam nikal rahe hain taaki frontend ko send na karna pade
+                var seat = await _dbContext.Set<Seat>().FindAsync(request.SeatId);
+                var shift = await _dbContext.Set<Shift>().FindAsync(request.ShiftId);
+
+                if (seat != null) student.SeatNumber = seat.Id;
+                if (shift != null) student.ShiftType = shift.ShiftName;
+
+                _dbContext.Set<Student>().Update(student);
+                await _dbContext.SaveChangesAsync();
+            }
+            // ------------------------------------------------------------
+
             return Ok(new SeatAssignmentResponse
             {
                 Id = assignment.Id,
@@ -168,8 +189,27 @@ public class SeatManagementController : ControllerBase
     [HttpDelete("assignments/delete/{id}")]
     public async Task<IActionResult> RemoveAssignment(int id)
     {
+        // Delete karne se pehle Assignment nikal lo taaki StudentVdlId pata chal sake
+        var assignment = await _dbContext.Set<SeatAssignment>().FindAsync(id);
+        string studentVdlId = assignment?.StudentVdlId;
+
         var success = await _seatService.DeleteSeatAssignmentAsync(id);
         if (!success) return NotFound(new { message = "Assignment not found or already deleted." });
+        
+        // --- NEW LOGIC: Seat remove hone par Student table se details clear (null) karna ---
+        if (!string.IsNullOrEmpty(studentVdlId))
+        {
+            var student = await _dbContext.Set<Student>().FirstOrDefaultAsync(s => s.VdlId == studentVdlId);
+            if (student != null)
+            {
+                student.SeatNumber = null;
+                student.ShiftType = null;
+                _dbContext.Set<Student>().Update(student);
+                await _dbContext.SaveChangesAsync();
+            }
+        }
+        // -----------------------------------------------------------------------------------
+
         return Ok(new { message = "Assignment removed successfully." });
     }
 }

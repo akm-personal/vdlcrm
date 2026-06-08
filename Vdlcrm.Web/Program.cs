@@ -199,7 +199,7 @@ app.UseCors("AllowAll");
 // Database viewer UI endpoint
 app.MapGet("/db-viewer", async (AppDbContext db) =>
 {
-    var forecasts = await db.WeatherForecasts.ToListAsync();
+    var forecasts = await db.WeatherForecasts.AsNoTracking().ToListAsync();
     
     var html = @"
 <!DOCTYPE html>
