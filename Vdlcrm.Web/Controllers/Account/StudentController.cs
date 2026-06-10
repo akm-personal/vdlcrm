@@ -515,4 +515,80 @@ public class StudentController : ControllerBase
                 new { message = "An error occurred while deleting the student.", error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Reset student password (Admin & Internal User only)
+    /// </summary>
+    /// <param name="vdlId">Student VDL ID</param>
+    /// <param name="request">New password request</param>
+    /// <returns>User's VDL ID, Name, and New Password</returns>
+    [HttpPost("reset-password/{vdlId}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> AdminResetPassword(string vdlId, [FromBody] AdminPasswordResetRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(vdlId) || request == null || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest(new { message = "VDL ID and new password are required." });
+        }
+
+        // Role check: Only Admin (1) and Internal User (2) can reset passwords
+        var roleIdClaim = User.FindFirst("RoleId")?.Value;
+        if (!int.TryParse(roleIdClaim, out int roleId) || (roleId != 1 && roleId != 2))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Access Denied: Only Admins and Internal Users can reset passwords." });
+        }
+
+        try
+        {
+            var student = await _studentService.GetStudentByVdlIdAsync(vdlId);
+            if (student == null)
+            {
+                return NotFound(new { message = $"Student with VDL ID '{vdlId}' not found." });
+            }
+
+            var appUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == vdlId);
+            if (appUser == null)
+            {
+                return NotFound(new { message = $"User account for VDL ID '{vdlId}' not found." });
+            }
+
+            var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            // Update in AppDbContext (Tenant Database)
+            appUser.PasswordHash = newPasswordHash;
+            appUser.UpdatedDate = DateTime.UtcNow;
+            _dbContext.Users.Update(appUser);
+            await _dbContext.SaveChangesAsync();
+
+            // Update in MasterDbContext (Master Database)
+            var currentTenantId = _tenantResolver.CurrentTenant?.TenantId ?? "default_schema";
+            var masterUser = await _masterDbContext.Users.FirstOrDefaultAsync(u => u.Username == vdlId && u.TenantId == currentTenantId);
+            if (masterUser != null)
+            {
+                masterUser.PasswordHash = newPasswordHash;
+                masterUser.UpdatedDate = DateTime.UtcNow;
+                _masterDbContext.Users.Update(masterUser);
+                await _masterDbContext.SaveChangesAsync();
+            }
+
+            return Ok(new 
+            { 
+                message = "Password reset successfully.",
+                vdlId = student.VdlId,
+                name = student.Name,
+                password = request.NewPassword
+            });
+        }
+        catch (Exception ex)
+        {
+            await _errorLoggingService.LogExceptionAsync(ex, HttpContext.Request.Path);
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "An error occurred while resetting the password.", error = ex.Message });
+        }
+    }
 }

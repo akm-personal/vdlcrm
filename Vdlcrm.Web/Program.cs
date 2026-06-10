@@ -3,6 +3,7 @@ using Vdlcrm.Services;
 using Vdlcrm.Model;
 using Vdlcrm.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -15,8 +16,6 @@ using Vdlcrm.Web;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 // NSwag Swagger generator for interactive UI at /swagger
 
 // 1. Admin & Internal User API Document (All APIs)
@@ -113,6 +112,13 @@ builder.Services.AddScoped<SeatManagementService>();  // Add SeatManagementServi
 builder.Services.AddScoped<FeeService>();  // Add FeeService for fee management
 builder.Services.AddSignalR(); // Add SignalR for real-time notifications
 builder.Services.AddSingleton<ErrorLoggingService>(); // Middleware me use hone ki wajah se ise Singleton banana zaroori hai
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<AttendanceService>();
+
+// builder.Services.AddHostedService<AutoPunchOutBackgroundService>(); // Temporarily stopped for development. Uncomment when going live.
+
+// Add Memory Cache for DynamicPermissionMiddleware and others
+builder.Services.AddMemoryCache();
 
 // 1. HTTP Header access karne ke liye zaroori
 builder.Services.AddHttpContextAccessor(); 
@@ -157,7 +163,6 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.MapOpenApi();
 app.UseOpenApi();
 app.UseSwaggerUi();
 // Commenting out HTTPS redirect for development purposes
@@ -284,6 +289,8 @@ app.MapGet("/db-viewer", async (AppDbContext db) =>
 
 app.MapHub<Vdlcrm.Web.Hubs.NotificationHub>("/hubs/notifications");
 app.MapControllers();
+
+app.Run();
 
 string GetDatabaseBrowserHtml()
 {
@@ -1364,5 +1371,3 @@ void ApplySwaggerExamples(NSwag.OpenApiDocument document)
         };
     }
 }
-
-app.Run();

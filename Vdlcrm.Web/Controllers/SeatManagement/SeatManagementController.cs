@@ -191,7 +191,7 @@ public class SeatManagementController : ControllerBase
     {
         // Delete karne se pehle Assignment nikal lo taaki StudentVdlId pata chal sake
         var assignment = await _dbContext.Set<SeatAssignment>().FindAsync(id);
-        string studentVdlId = assignment?.StudentVdlId;
+        string? studentVdlId = assignment?.StudentVdlId;
 
         var success = await _seatService.DeleteSeatAssignmentAsync(id);
         if (!success) return NotFound(new { message = "Assignment not found or already deleted." });

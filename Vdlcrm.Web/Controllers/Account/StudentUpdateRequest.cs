@@ -19,3 +19,8 @@ public class StudentUpdateRequest
     public string? MobileNumber { get; set; }
     public string? StudentStatus { get; set; }
 }
+
+public class AdminPasswordResetRequest
+{
+    public string NewPassword { get; set; } = string.Empty;
+}

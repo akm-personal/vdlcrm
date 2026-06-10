@@ -1,21 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vdlcrm.Web</RootNamespace>
     <AssemblyName>Vdlcrm.Web</AssemblyName>
+    <!-- Prevent Out of Memory (OOM) crashes by excluding heavy database files from MSBuild -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);main_database\**;backup_database\**;tenants_database\**;**\*.db;**\*.db-shm;**\*.db-wal</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.4" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.4" />
     <PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
@@ -28,4 +30,13 @@
     <ProjectReference Include="..\Vdlcrm.Model\Vdlcrm.Model.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Explicitly remove these folders from build/copy process so MSBuild doesn't crash -->
+    <Content Remove="main_database\**" />
+    <Content Remove="backup_database\**" />
+    <Content Remove="tenants_database\**" />
+    <None Remove="main_database\**" />
+    <None Remove="backup_database\**" />
+    <None Remove="tenants_database\**" />
+  </ItemGroup>
 </Project>
