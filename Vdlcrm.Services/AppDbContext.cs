@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
     public DbSet<Seat> Seats { get; set; }
     public DbSet<SeatAssignment> SeatAssignments { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<StudentDocument> StudentDocuments { get; set; }
+    public DbSet<AppSetting> AppSettings { get; set; }
+    public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -231,6 +234,19 @@ public class AppDbContext : DbContext
             entity.ToTable("endpoint_permissions");
             entity.HasKey(e => e.Id);
         });
+        
+        // Seed default application settings
+        modelBuilder.Entity<AppSetting>().HasData(
+            new AppSetting { Key = "LibraryLatitude", Value = "28.6139", Description = "Library exact latitude (Default: Delhi)", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "LibraryLongitude", Value = "77.2090", Description = "Library exact longitude", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AttendanceRadius", Value = "50", Description = "Allowed radius for punch in/out in meters", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutHours", Value = "8", Description = "Hours after which a student is auto-punched out", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutWorkerEnabled", Value = "true", Description = "Enable background auto punch out job (true/false)", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutWorkerIntervalHours", Value = "5", Description = "How often background job runs (hours)", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutWorkerMode", Value = "Day", Description = "When to run (Day/Night/Both)", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutDayStart", Value = "08:00", Description = "Day shift start time (HH:mm)", UpdatedAt = DateTime.UtcNow },
+            new AppSetting { Key = "AutoPunchOutDayEnd", Value = "20:00", Description = "Day shift end time (HH:mm)", UpdatedAt = DateTime.UtcNow }
+        );
 
         // Configure SeatRow entity
         modelBuilder.Entity<SeatRow>(entity =>
@@ -280,6 +296,14 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ShiftId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure StudentDocument entity
+        modelBuilder.Entity<StudentDocument>(entity =>
+        {
+            entity.ToTable("student_documents");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.VdlId); // VdlId par index taaki search fast ho
         });
     }
 }

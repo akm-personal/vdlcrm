@@ -2,107 +2,23 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vdlcrm.Services;
 
 #nullable disable
 
-namespace Vdlcrm.Services.Migrations
+namespace Vdlcrm.Services.Migrations.App
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609190558_AddStudentDocumentsTable")]
+    partial class AddStudentDocumentsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.4");
-
-            modelBuilder.Entity("Vdlcrm.Model.AppSetting", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("app_settings");
-
-                    b.HasData(
-                        new
-                        {
-                            Key = "LibraryLatitude",
-                            Description = "Library exact latitude (Default: Delhi)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3555),
-                            Value = "28.6139"
-                        },
-                        new
-                        {
-                            Key = "LibraryLongitude",
-                            Description = "Library exact longitude",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3743),
-                            Value = "77.2090"
-                        },
-                        new
-                        {
-                            Key = "AttendanceRadius",
-                            Description = "Allowed radius for punch in/out in meters",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3745),
-                            Value = "50"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutHours",
-                            Description = "Hours after which a student is auto-punched out",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3746),
-                            Value = "8"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutWorkerEnabled",
-                            Description = "Enable background auto punch out job (true/false)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3748),
-                            Value = "true"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutWorkerIntervalHours",
-                            Description = "How often background job runs (hours)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3749),
-                            Value = "5"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutWorkerMode",
-                            Description = "When to run (Day/Night/Both)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3750),
-                            Value = "Day"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutDayStart",
-                            Description = "Day shift start time (HH:mm)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3752),
-                            Value = "08:00"
-                        },
-                        new
-                        {
-                            Key = "AutoPunchOutDayEnd",
-                            Description = "Day shift end time (HH:mm)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3753),
-                            Value = "20:00"
-                        });
-                });
 
             modelBuilder.Entity("Vdlcrm.Model.AppStatus", b =>
                 {
@@ -208,55 +124,6 @@ namespace Vdlcrm.Services.Migrations
                             StatusName = "Cancelled",
                             StatusType = "Student"
                         });
-                });
-
-            modelBuilder.Entity("Vdlcrm.Model.AttendanceRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsAutoPunchedOut")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double?>("OvertimeMinutes")
-                        .HasColumnType("REAL");
-
-                    b.Property<double?>("PunchInLatitude")
-                        .HasColumnType("REAL");
-
-                    b.Property<double?>("PunchInLongitude")
-                        .HasColumnType("REAL");
-
-                    b.Property<DateTime>("PunchInTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<double?>("PunchOutLatitude")
-                        .HasColumnType("REAL");
-
-                    b.Property<double?>("PunchOutLongitude")
-                        .HasColumnType("REAL");
-
-                    b.Property<DateTime?>("PunchOutTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("ShiftId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("VdlId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("attendance_records");
                 });
 
             modelBuilder.Entity("Vdlcrm.Model.EndpointPermission", b =>

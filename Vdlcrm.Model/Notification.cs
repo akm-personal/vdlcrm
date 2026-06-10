@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Vdlcrm.Model;
 
-[Table("notifications")]
 public class Notification
 {
     [Key]

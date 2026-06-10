@@ -2,17 +2,20 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vdlcrm.Services;
 
 #nullable disable
 
-namespace Vdlcrm.Services.Migrations
+namespace Vdlcrm.Services.Migrations.App
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609195431_AddAttendanceAndSettings")]
+    partial class AddAttendanceAndSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.4");
@@ -43,63 +46,63 @@ namespace Vdlcrm.Services.Migrations
                         {
                             Key = "LibraryLatitude",
                             Description = "Library exact latitude (Default: Delhi)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3555),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(4896),
                             Value = "28.6139"
                         },
                         new
                         {
                             Key = "LibraryLongitude",
                             Description = "Library exact longitude",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3743),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5189),
                             Value = "77.2090"
                         },
                         new
                         {
                             Key = "AttendanceRadius",
                             Description = "Allowed radius for punch in/out in meters",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3745),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5191),
                             Value = "50"
                         },
                         new
                         {
                             Key = "AutoPunchOutHours",
                             Description = "Hours after which a student is auto-punched out",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3746),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5193),
                             Value = "8"
                         },
                         new
                         {
                             Key = "AutoPunchOutWorkerEnabled",
                             Description = "Enable background auto punch out job (true/false)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3748),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5194),
                             Value = "true"
                         },
                         new
                         {
                             Key = "AutoPunchOutWorkerIntervalHours",
                             Description = "How often background job runs (hours)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3749),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5195),
                             Value = "5"
                         },
                         new
                         {
                             Key = "AutoPunchOutWorkerMode",
                             Description = "When to run (Day/Night/Both)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3750),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5197),
                             Value = "Day"
                         },
                         new
                         {
                             Key = "AutoPunchOutDayStart",
                             Description = "Day shift start time (HH:mm)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3752),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5198),
                             Value = "08:00"
                         },
                         new
                         {
                             Key = "AutoPunchOutDayEnd",
                             Description = "Day shift end time (HH:mm)",
-                            UpdatedAt = new DateTime(2026, 6, 10, 8, 52, 16, 384, DateTimeKind.Utc).AddTicks(3753),
+                            UpdatedAt = new DateTime(2026, 6, 9, 19, 54, 30, 844, DateTimeKind.Utc).AddTicks(5199),
                             Value = "20:00"
                         });
                 });
